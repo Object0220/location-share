@@ -412,9 +412,9 @@ Page({
     const markers = [{
       id: 'self',
       latitude: myLoc.latitude, longitude: myLoc.longitude,
-      iconPath: '/images/transparent.png', width: 1, height: 1,
+      iconPath: '/images/transparent.png', width: 10, height: 60,
       callout: { content: '当前位置', display: 'ALWAYS', fontSize: 12, borderRadius: 10, bgColor: '#409eff', padding: 6, textAlign: 'center', color: '#fff' },
-      anchor: { x: 0.5, y: 0.5 },
+      anchor: { x: 0.5, y: 1 },
     }];
 
     if (partnerLoc && partnerLoc.latitude) {
