@@ -409,7 +409,13 @@ Page({
     const partnerLoc = this._cachedPartnerLocation;
     if (!myLoc || !myLoc.latitude) return;
 
-    const markers = [];
+    const markers = [{
+      id: 'self',
+      latitude: myLoc.latitude, longitude: myLoc.longitude,
+      iconPath: '/images/transparent.png', width: 1, height: 1,
+      callout: { content: '当前位置', display: 'ALWAYS', fontSize: 12, borderRadius: 10, bgColor: '#409eff', padding: 6, textAlign: 'center', color: '#fff' },
+      anchor: { x: 0.5, y: 0.5 },
+    }];
 
     if (partnerLoc && partnerLoc.latitude) {
       const label = this.data.partnerStale ? '暂未更新' : (this.data.partnerInfo.nickName || '对方');
@@ -424,24 +430,31 @@ Page({
     }
 
     this.setData({ markers });
-    if (partnerLoc && partnerLoc.latitude) this._markersInited = true;
+    if (myLoc && myLoc.latitude) this._markersInited = true;
     this._updatePolyline();
   },
 
   _updateMarkerPositions() {
-    if (!this._markersInited) return;
+    const updateData = {};
+    const myLoc = this._cachedMyLocation;
     const partnerLoc = this._cachedPartnerLocation;
-    if (partnerLoc && partnerLoc.latitude) {
-      this.setData({
-        'markers[0].latitude': partnerLoc.latitude,
-        'markers[0].longitude': partnerLoc.longitude,
-        'markers[0].rotate': partnerLoc.heading || 0,
-      });
+    if (myLoc && myLoc.latitude) {
+      updateData['markers[0].latitude'] = myLoc.latitude;
+      updateData['markers[0].longitude'] = myLoc.longitude;
     }
+    if (partnerLoc && partnerLoc.latitude) {
+      const partnerIdx = this.data.markers.length > 1 ? 1 : -1;
+      if (partnerIdx >= 0) {
+        updateData['markers[' + partnerIdx + '].latitude'] = partnerLoc.latitude;
+        updateData['markers[' + partnerIdx + '].longitude'] = partnerLoc.longitude;
+        updateData['markers[' + partnerIdx + '].rotate'] = partnerLoc.heading || 0;
+      }
+    }
+    if (Object.keys(updateData).length > 0) this.setData(updateData);
   },
 
   _updateMarkerLabels() {
-    if (this.data.markers.length < 1) return;
+    if (this.data.markers.length < 2) return;
     const label = this.data.partnerStale ? '暂未更新' : (this.data.partnerInfo.nickName || '对方');
     const content = this.data.partnerLastUpdate ? label + ' · ' + this.data.partnerLastUpdate : label;
     this.setData({ 'markers[1].callout.content': content });
