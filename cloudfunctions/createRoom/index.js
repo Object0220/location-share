@@ -90,7 +90,7 @@ exports.main = async (event, context) => {
 
 function generateShareCode() {
   let code = '';
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 4; i++) {
     code += Math.floor(Math.random() * 10).toString();
   }
   return code;

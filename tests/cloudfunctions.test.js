@@ -44,14 +44,14 @@ describe('🏠 createRoom', () => {
     setCurrentUser('user_A');
     const res = await createRoom.main({
       roomId: 'room_001',
-      shareCode: '123456',
+      shareCode: '1234',
       userA: { nickName: 'Alice' },
     });
 
     expect(res.code).toBe(0);
     // 云函数将 roomId 作为 _id 写入，add 返回 _id
     expect(res.roomId).toBe('room_001');
-    expect(res.shareCode).toBe('123456');
+    expect(res.shareCode).toBe('1234');
 
     const room = dbStore.rooms.get('room_001');
     expect(room).toBeTruthy();
@@ -71,7 +71,7 @@ describe('🏠 createRoom', () => {
     setCurrentUser('user_A');
     const res1 = await createRoom.main({
       roomId: 'room_001',
-      shareCode: '123456',
+      shareCode: '1234',
       userA: { nickName: 'Alice' },
     });
     expect(res1.code).toBe(0);
@@ -79,24 +79,24 @@ describe('🏠 createRoom', () => {
     // 再次创建（不同 roomId），应该复用原房间
     const res2 = await createRoom.main({
       roomId: 'room_999',
-      shareCode: '999999',
+      shareCode: '9999',
       userA: { nickName: 'Alice' },
     });
     expect(res2.code).toBe(0);
     // 因为用户已有活跃房间，复用 room_001
     expect(res2.roomId).toBe('room_001');
-    expect(res2.shareCode).toBe('123456');
+    expect(res2.shareCode).toBe('1234');
     expect(dbStore.rooms.size).toBe(1);
   });
 
   test('共享码冲突时应自动重新生成', async () => {
     setCurrentUser('user_A');
-    await createRoom.main({ roomId: 'room_001', shareCode: '123456', userA: { nickName: 'Alice' } });
+    await createRoom.main({ roomId: 'room_001', shareCode: '1234', userA: { nickName: 'Alice' } });
 
     setCurrentUser('user_B');
-    const res = await createRoom.main({ roomId: 'room_B', shareCode: '123456', userA: { nickName: 'Bob' } });
+    const res = await createRoom.main({ roomId: 'room_B', shareCode: '1234', userA: { nickName: 'Bob' } });
     expect(res.code).toBe(0);
-    expect(res.shareCode).not.toBe('123456');
+    expect(res.shareCode).not.toBe('1234');
     expect(dbStore.rooms.size).toBe(2);
   });
 });
@@ -106,10 +106,10 @@ describe('🔗 joinRoom', () => {
 
   test('通过共享码加入房间应成功', async () => {
     setCurrentUser('user_A');
-    await createRoom.main({ roomId: 'room_001', shareCode: '123456', userA: { nickName: 'Alice' } });
+    await createRoom.main({ roomId: 'room_001', shareCode: '1234', userA: { nickName: 'Alice' } });
 
     setCurrentUser('user_B');
-    const res = await joinRoom.main({ shareCode: '123456', userB: { nickName: 'Bob' } });
+    const res = await joinRoom.main({ shareCode: '1234', userB: { nickName: 'Bob' } });
     expect(res.code).toBe(0);
     expect(res.roomId).toBe('room_001');
     expect(res.partnerInfo.nickName).toBe('Alice');
@@ -120,7 +120,7 @@ describe('🔗 joinRoom', () => {
   });
 
   test('无效共享码应返回错误', async () => {
-    const res = await joinRoom.main({ shareCode: '000000', userB: {} });
+    const res = await joinRoom.main({ shareCode: '0000', userB: {} });
     expect(res.code).toBe(-1);
     expect(res.message).toBe('共享码无效或房间已过期');
   });
@@ -133,26 +133,26 @@ describe('🔗 joinRoom', () => {
 
   test('不能加入自己的房间', async () => {
     setCurrentUser('user_A');
-    await createRoom.main({ roomId: 'room_001', shareCode: '123456', userA: { nickName: 'Alice' } });
+    await createRoom.main({ roomId: 'room_001', shareCode: '1234', userA: { nickName: 'Alice' } });
 
-    const res = await joinRoom.main({ shareCode: '123456', userB: { nickName: 'Alice' } });
+    const res = await joinRoom.main({ shareCode: '1234', userB: { nickName: 'Alice' } });
     expect(res.code).toBe(-1);
     expect(res.message).toBe('不能加入自己创建的房间');
   });
 
   test('用户在其他活跃房间时应自动退出旧房间', async () => {
     setCurrentUser('user_A');
-    await createRoom.main({ roomId: 'room_001', shareCode: '111111', userA: { nickName: 'Alice' } });
+    await createRoom.main({ roomId: 'room_001', shareCode: '1111', userA: { nickName: 'Alice' } });
     setCurrentUser('user_B');
-    await joinRoom.main({ shareCode: '111111', userB: { nickName: 'Bob' } });
+    await joinRoom.main({ shareCode: '1111', userB: { nickName: 'Bob' } });
 
     // C 创建新房间
     setCurrentUser('user_C');
-    await createRoom.main({ roomId: 'room_002', shareCode: '222222', userA: { nickName: 'Carol' } });
+    await createRoom.main({ roomId: 'room_002', shareCode: '2222', userA: { nickName: 'Carol' } });
 
     // B 加入 C 的房间
     setCurrentUser('user_B');
-    const res = await joinRoom.main({ shareCode: '222222', userB: { nickName: 'Bob' } });
+    const res = await joinRoom.main({ shareCode: '2222', userB: { nickName: 'Bob' } });
     expect(res.code).toBe(0);
 
     // B 离开后 room_001 应已 ended
@@ -163,14 +163,14 @@ describe('🔗 joinRoom', () => {
 
   test('两人同时加入同一房间时只一人成功（乐观锁）', async () => {
     setCurrentUser('user_A');
-    await createRoom.main({ roomId: 'room_001', shareCode: '123456', userA: { nickName: 'Alice' } });
+    await createRoom.main({ roomId: 'room_001', shareCode: '1234', userA: { nickName: 'Alice' } });
 
     setCurrentUser('user_B1');
-    const res1 = await joinRoom.main({ shareCode: '123456', userB: { nickName: 'Bob1' } });
+    const res1 = await joinRoom.main({ shareCode: '1234', userB: { nickName: 'Bob1' } });
 
     // 第二次加入时房间状态已变为 active，不会再匹配到 waiting 房间
     setCurrentUser('user_B2');
-    const res2 = await joinRoom.main({ shareCode: '123456', userB: { nickName: 'Bob2' } });
+    const res2 = await joinRoom.main({ shareCode: '1234', userB: { nickName: 'Bob2' } });
 
     expect(res1.code).toBe(0);
     expect(res2.code).toBe(-1);
@@ -182,9 +182,9 @@ describe('📡 getRoomInfo', () => {
 
   test('房间成员应能获取对方信息及位置', async () => {
     setCurrentUser('user_A');
-    await createRoom.main({ roomId: 'room_001', shareCode: '123456', userA: { nickName: 'Alice' } });
+    await createRoom.main({ roomId: 'room_001', shareCode: '1234', userA: { nickName: 'Alice' } });
     setCurrentUser('user_B');
-    await joinRoom.main({ shareCode: '123456', userB: { nickName: 'Bob' } });
+    await joinRoom.main({ shareCode: '1234', userB: { nickName: 'Bob' } });
 
     // 写位置数据（使用云函数真实的文档 ID 格式：roomId_userId）
     const db = mockDb();
@@ -208,9 +208,9 @@ describe('📡 getRoomInfo', () => {
 
   test('非房间成员应被拒绝', async () => {
     setCurrentUser('user_A');
-    await createRoom.main({ roomId: 'room_001', shareCode: '123456', userA: { nickName: 'Alice' } });
+    await createRoom.main({ roomId: 'room_001', shareCode: '1234', userA: { nickName: 'Alice' } });
     setCurrentUser('user_B');
-    await joinRoom.main({ shareCode: '123456', userB: { nickName: 'Bob' } });
+    await joinRoom.main({ shareCode: '1234', userB: { nickName: 'Bob' } });
 
     // 外人 C 尝试获取
     setCurrentUser('user_C');
@@ -221,9 +221,9 @@ describe('📡 getRoomInfo', () => {
 
   test('对方尚无位置时应为 null', async () => {
     setCurrentUser('user_A');
-    await createRoom.main({ roomId: 'room_001', shareCode: '123456', userA: { nickName: 'Alice' } });
+    await createRoom.main({ roomId: 'room_001', shareCode: '1234', userA: { nickName: 'Alice' } });
     setCurrentUser('user_B');
-    await joinRoom.main({ shareCode: '123456', userB: { nickName: 'Bob' } });
+    await joinRoom.main({ shareCode: '1234', userB: { nickName: 'Bob' } });
 
     // A 查看，双方都还没上报位置
     setCurrentUser('user_A');
@@ -245,9 +245,9 @@ describe('🚪 leaveRoom', () => {
 
   test('离开房间后状态变为 ended 并清理位置数据', async () => {
     setCurrentUser('user_A');
-    await createRoom.main({ roomId: 'room_001', shareCode: '123456', userA: { nickName: 'Alice' } });
+    await createRoom.main({ roomId: 'room_001', shareCode: '1234', userA: { nickName: 'Alice' } });
     setCurrentUser('user_B');
-    await joinRoom.main({ shareCode: '123456', userB: { nickName: 'Bob' } });
+    await joinRoom.main({ shareCode: '1234', userB: { nickName: 'Bob' } });
 
     // 写入位置数据
     const db = mockDb();
@@ -305,13 +305,13 @@ describe('🧹 cleanExpiredLocations', () => {
   test('应关闭超时 waiting 房间（>30分钟）', async () => {
     // 直接写一个超时 waiting 房间（约40分钟前）
     dbStore.rooms.set('room_old', {
-      _id: 'room_old', roomId: 'room_old', shareCode: '000001',
+      _id: 'room_old', roomId: 'room_old', shareCode: '0001',
       userA: { userId: 'old_user' }, userB: {},
       status: 'waiting', createTime: new Date(Date.now() - 40 * 60 * 1000),
     });
     // 较新的 waiting 房间（约5分钟前）
     dbStore.rooms.set('room_new', {
-      _id: 'room_new', roomId: 'room_new', shareCode: '000002',
+      _id: 'room_new', roomId: 'room_new', shareCode: '0002',
       userA: { userId: 'new_user' }, userB: {},
       status: 'waiting', createTime: new Date(Date.now() - 5 * 60 * 1000),
     });
@@ -333,7 +333,7 @@ describe('🔄 完整流程：A ↔ B 位置共享', () => {
     setCurrentUser('user_Alice');
     const createRes = await createRoom.main({
       roomId: 'room_integration',
-      shareCode: '654321',
+      shareCode: '4321',
       userA: { nickName: 'Alice' },
     });
     expect(createRes.code).toBe(0);
@@ -342,7 +342,7 @@ describe('🔄 完整流程：A ↔ B 位置共享', () => {
     // 2. B 通过共享码加入
     setCurrentUser('user_Bob');
     const joinRes = await joinRoom.main({
-      shareCode: '654321',
+      shareCode: '4321',
       userB: { nickName: 'Bob' },
     });
     expect(joinRes.code).toBe(0);

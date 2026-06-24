@@ -203,11 +203,11 @@ module.exports = {
   // ====== 辅助方法 ======
 
   /**
-   * 生成 6 位数字共享码
+   * 生成 4 位数字共享码
    */
   _generateShareCode() {
     let code = '';
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 4; i++) {
       code += Math.floor(Math.random() * 10).toString();
     }
     return code;

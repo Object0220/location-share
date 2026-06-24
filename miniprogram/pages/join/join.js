@@ -7,11 +7,9 @@ const locationService = require('../../services/location');
 
 Page({
   data: {
-    codeValue: '',           // 6 位共享码
+    codeValue: '',           // 4 位共享码
     codeLength: 0,
     codeSlots: [
-      { value: '', filled: false, active: false },
-      { value: '', filled: false, active: false },
       { value: '', filled: false, active: false },
       { value: '', filled: false, active: false },
       { value: '', filled: false, active: false },
@@ -63,21 +61,21 @@ Page({
     let code = this.data.codeValue;
     const activeIndex = this.data.codeSlots.findIndex(s => s.active);
 
-    if (code.length >= 6) return;
+    if (code.length >= 4) return;
 
     // 确定填充位置（从 active 位置或第一个空位开始）
     let fillIndex = activeIndex >= 0 && !this.data.codeSlots[activeIndex].filled
       ? activeIndex
       : code.length;
 
-    if (fillIndex >= 6) return;
+    if (fillIndex >= 4) return;
 
     code += value;
     this._updateSlots(code);
     this.setData({ codeValue: code, errorMsg: '' });
 
     // 自动提交
-    if (code.length === 6) {
+    if (code.length === 4) {
       this._doJoin(code);
     }
   },
@@ -121,14 +119,14 @@ Page({
     wx.getClipboardData({
       success(res) {
         const text = (res.data || '').trim();
-        // 只提取数字，限制 6 位
-        const digits = text.replace(/\D/g, '').slice(0, 6);
-        if (digits.length === 6) {
+        // 只提取数字，限制 4 位
+        const digits = text.replace(/\D/g, '').slice(0, 4);
+        if (digits.length === 4) {
           that._updateSlots(digits);
           that.setData({ codeValue: digits, errorMsg: '' });
           that._doJoin(digits);
         } else if (digits.length > 0) {
-          that.setData({ errorMsg: '共享码格式不正确，请输入6位数字' });
+          that.setData({ errorMsg: '共享码格式不正确，请输入4位数字' });
           that._updateSlots(digits);
           that.setData({ codeValue: digits });
         }
@@ -144,10 +142,10 @@ Page({
     const result = e.detail.result;
     if (result) {
       // 提取共享码：可能是直接数字，也可能是 URL 参数
-      const codeMatch = result.match(/(?:code=)?(\d{6})/);
-      const code = codeMatch ? codeMatch[1] : result.replace(/\D/g, '').slice(0, 6);
+      const codeMatch = result.match(/(?:code=)?(\d{4})/);
+      const code = codeMatch ? codeMatch[1] : result.replace(/\D/g, '').slice(0, 4);
 
-      if (code.length === 6) {
+      if (code.length === 4) {
         this._updateSlots(code);
         this.setData({ codeValue: code, errorMsg: '' });
         this._doJoin(code);

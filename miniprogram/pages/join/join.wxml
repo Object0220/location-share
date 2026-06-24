@@ -14,7 +14,7 @@
   <!-- 标题 -->
   <view class="header">
     <text class="header-title">加入共享房间</text>
-    <text class="header-subtitle">输入对方提供的 6 位共享码</text>
+    <text class="header-subtitle">输入对方提供的 4 位共享码</text>
   </view>
 
   <!-- 共享码输入区域 -->
