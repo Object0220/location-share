@@ -7,8 +7,6 @@ const locationService = require('../../services/location');
 
 Page({
   data: {
-    hasActiveRoom: false,
-    partnerName: '',
     showShareCode: false,
     shareCode: '',
     shareCodeArray: [],
@@ -19,7 +17,6 @@ Page({
 
   onLoad() {
     console.log('🏠 [首页] onLoad');
-    this._checkActiveRoom();
     this.setData({ debugMsg: '正在初始化数据库...' });
     this._checkDbReady();
   },
@@ -63,8 +60,6 @@ Page({
     if (room && room.status === 'waiting') {
       console.log('🏠 [首页] 有等待中的房间 roomId=' + room.roomId + ' shareCode=' + room.shareCode);
       this._watchRoomStatus(room.roomId);
-    }else{
-      this.setData({ showShareCode: false ,hasActiveRoom: false});
     }
   },
 
@@ -99,7 +94,6 @@ Page({
   },
 
   onJoinRoom() { wx.navigateTo({ url: '/pages/join/join' }); },
-  enterMap() { wx.navigateTo({ url: '/pages/map/map' }); },
 
   /** 复制共享码 */
   onCopyCode() {
@@ -119,7 +113,7 @@ Page({
         try {
           const room = app.globalData.currentRoom;
           if (room) await roomService.leaveRoom(room.roomId);
-          this.setData({ showShareCode: false, hasActiveRoom: false, partnerName: '' });
+          this.setData({ showShareCode: false });
           app.clearRoom();
         } catch (err) {
           console.error('取消共享失败', err);
@@ -129,15 +123,6 @@ Page({
   },
 
   // ====== 内部方法 ======
-
-  /** 检查是否有活跃的房间 */
-  _checkActiveRoom() {
-    const room = app.globalData.currentRoom;
-    this.setData({
-      hasActiveRoom: !!(room && room.status === 'active'),
-      partnerName: (room && room.partnerInfo) ? room.partnerInfo.nickName : '对方',
-    });
-  },
 
   /** 执行创建房间 */
   async _doCreateRoom(userInfo) {
@@ -190,8 +175,7 @@ Page({
             role: 'A', status: 'active', partnerInfo: room.userB,
           });
           this.setData({
-            showShareCode: false, hasActiveRoom: true,
-            partnerName: room.userB.nickName || '对方',
+            showShareCode: false
           });
           wx.showToast({ title: '对方已加入', icon: 'success' });
           setTimeout(() => wx.navigateTo({ url: '/pages/map/map' }), 1000);
@@ -201,7 +185,7 @@ Page({
           console.log('🏠 [首页] 🔚 共享已结束');
           this._closeWatcher();
           app.clearRoom();
-          this.setData({ showShareCode: false ,hasActiveRoom: false});
+          this.setData({ showShareCode: false });
           wx.showToast({ title: '共享已结束', icon: 'none' });
           return;
         }

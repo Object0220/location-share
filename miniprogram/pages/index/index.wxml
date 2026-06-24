@@ -14,21 +14,8 @@
 
 
 
-  <!-- 调试状态 -->
-  <!-- <view class="debug-bar" wx:if="{{debugMsg}}">
-    <text class="debug-text">{{debugMsg}}</text>
-    <button class="debug-btn" bindtap="onRetryInit" wx:if="{{showRetry}}">重试初始化</button>
-  </view> -->
-
-    <!-- 配对状态卡片 -->
-    <view class="status-card" wx:if="{{hasActiveRoom}}">
-    <view class="status-card-content"> 
-      <button class="btn-enter" bindtap="enterMap">已匹配的位置共享</button>
-    </view>
-  </view>
-
   <!-- 主功能区 -->
-  <view class="main-content" wx:if="{{!hasActiveRoom}}">
+  <view class="main-content">
     <!-- 创建房间 -->
     <view class="action-card" bindtap="onCreateRoom">
       <view class="action-icon create-icon">🔗</view>
