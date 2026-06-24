@@ -97,22 +97,6 @@
 
   <!-- 底部控制栏 -->
   <view class="bottom-controls safe-area-bottom">
-    <!-- 地图控制按钮 -->
-    <!-- <view class="control-group">
-      <view class="control-btn" bindtap="onZoomIn">
-        <text>＋</text>
-      </view>
-      <view class="control-btn" bindtap="onZoomOut">
-        <text>−</text>
-      </view>
-      <view class="control-btn" bindtap="onCenterSelf">
-        <text>◎</text>
-      </view>
-      <view class="control-btn" bindtap="onToggleSatellite">
-        <text>{{satelliteMode ? '🗺' : '🛰'}}</text>
-      </view>
-    </view> -->
-
     <!-- 结束共享按钮 -->
     <button class="btn-end-share" bindtap="onEndShare">
       结束共享
