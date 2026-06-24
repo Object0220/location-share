@@ -17,7 +17,7 @@ const PARTNER_STALE_TIMEOUT = 30000;
 const PARTNER_OFFLINE_TIMEOUT = 45000;
 // 定时器检查间隔
 const STALE_CHECK_INTERVAL = 10000;
-const UI_REFRESH_INTERVAL = 2000;
+const UI_REFRESH_INTERVAL = 1000;
 // 对方位置节流（watch 推送过滤）
 const PARTNER_UPDATE_THROTTLE = 5000;
 
@@ -409,13 +409,7 @@ Page({
     const partnerLoc = this._cachedPartnerLocation;
     if (!myLoc || !myLoc.latitude) return;
 
-    const markers = [{
-      id: 'self',
-      latitude: myLoc.latitude, longitude: myLoc.longitude,
-      iconPath: '/images/transparent.png', width: 10, height: 60,
-      callout: { content: '当前位置', display: 'ALWAYS', fontSize: 12, borderRadius: 10, bgColor: '#409eff', padding: 6, textAlign: 'center', color: '#fff' },
-      anchor: { x: 0.5, y: 1 },
-    }];
+    const markers = [];
 
     if (partnerLoc && partnerLoc.latitude) {
       const label = this.data.partnerStale ? '暂未更新' : (this.data.partnerInfo.nickName || '对方');
@@ -430,31 +424,24 @@ Page({
     }
 
     this.setData({ markers });
-    if (myLoc && myLoc.latitude) this._markersInited = true;
+    if (partnerLoc && partnerLoc.latitude) this._markersInited = true;
     this._updatePolyline();
   },
 
   _updateMarkerPositions() {
-    const updateData = {};
-    const myLoc = this._cachedMyLocation;
+    if (!this._markersInited) return;
     const partnerLoc = this._cachedPartnerLocation;
-    if (myLoc && myLoc.latitude) {
-      updateData['markers[0].latitude'] = myLoc.latitude;
-      updateData['markers[0].longitude'] = myLoc.longitude;
-    }
     if (partnerLoc && partnerLoc.latitude) {
-      const partnerIdx = this.data.markers.length > 1 ? 1 : -1;
-      if (partnerIdx >= 0) {
-        updateData['markers[' + partnerIdx + '].latitude'] = partnerLoc.latitude;
-        updateData['markers[' + partnerIdx + '].longitude'] = partnerLoc.longitude;
-        updateData['markers[' + partnerIdx + '].rotate'] = partnerLoc.heading || 0;
-      }
+      this.setData({
+        'markers[0].latitude': partnerLoc.latitude,
+        'markers[0].longitude': partnerLoc.longitude,
+        'markers[0].rotate': partnerLoc.heading || 0,
+      });
     }
-    if (Object.keys(updateData).length > 0) this.setData(updateData);
   },
 
   _updateMarkerLabels() {
-    if (this.data.markers.length < 2) return;
+    if (this.data.markers.length < 1) return;
     const label = this.data.partnerStale ? '暂未更新' : (this.data.partnerInfo.nickName || '对方');
     const content = this.data.partnerLastUpdate ? label + ' · ' + this.data.partnerLastUpdate : label;
     this.setData({ 'markers[1].callout.content': content });

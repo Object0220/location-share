@@ -3,19 +3,16 @@
  */
 
 /**
- * 格式化时间显示
+ * 格式化为秒级倒计时
  * @param {number} timestamp - 毫秒时间戳
- * @returns {string} 相对时间描述
+ * @returns {string} 秒数
  */
 function formatTimeAgo(timestamp) {
   const now = Date.now();
   const diff = now - timestamp;
-
-  if (diff < 0) return '刚刚';
-  if (diff < 3000) return '刚刚';
-  if (diff < 60000) return Math.floor(diff / 1000) + '秒前';
-  if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
-  return Math.floor(diff / 3600000) + '小时前';
+  if (diff < 0) return '0秒';
+  if (diff < 1000) return '0秒';
+  return Math.floor(diff / 1000) + '秒';
 }
 
 /**
