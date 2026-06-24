@@ -9,6 +9,7 @@
     scale="{{mapScale}}"
     markers="{{markers}}"
     polyline="{{polyline}}"
+    show-location="{{true}}"
     enable-satellite="{{satelliteMode}}"
     enable-traffic="{{showTraffic}}"
     style="width: 100%; height: 100vh;"

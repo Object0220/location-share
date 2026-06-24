@@ -58,7 +58,6 @@ Page({
   _markersInited: false,
   _prevStale: false,
   _userInteracted: false,
-  _compassHeading: -1,
 
   onLoad() {
     console.log('🗺️ [map] onLoad roomId=' + (app.globalData.currentRoom ? app.globalData.currentRoom.roomId.slice(0, 20) : '无'));
@@ -91,7 +90,6 @@ Page({
 
   onUnload() {
     console.log('🗺️ [map] onUnload 清理');
-    this._stopCompass();
     locationService.stopUpdating();
     this._unwatch();
     this._stopStaleCheck();
@@ -225,7 +223,6 @@ Page({
       return;
     }
     locationService.requestBackgroundPermission().catch(() => {});
-    this._startCompass();
     this._startLocationServices();
     this._startWatchingPartner();
     this._watchRoomStatus();
@@ -350,50 +347,9 @@ Page({
 
   // ====== 位置更新 ======
 
-  /** 启动陀螺仪（指南针），静止时也能显示准确方向 */
-  _startCompass() {
-    try {
-      wx.startCompass();
-      this._compassHeading = -1;
-      const that = this;
-      wx.onCompassChange(function (res) {
-        if (res && res.direction !== undefined) {
-          // direction: 0=北 90=东 180=南 270=西
-          that._compassHeading = res.direction;
-          that._updateSelfMarkerRotation();
-        }
-      });
-      console.log('🧭 [compass] 陀螺仪已启动');
-    } catch (err) {
-      console.warn('🧭 [compass] 启动失败', err);
-    }
-  },
-
-  _stopCompass() {
-    try {
-      wx.stopCompass();
-      wx.offCompassChange();
-    } catch (_) {}
-    this._compassHeading = -1;
-  },
-
-  /** 获取当前朝向（优先用陀螺仪，回退到 GPS heading） */
-  _getEffectiveHeading() {
-    if (this._compassHeading >= 0) return this._compassHeading;
-    return this._cachedMyLocation ? (this._cachedMyLocation.heading || 0) : 0;
-  },
-
-  /** 仅更新自己的 marker 旋转角度 */
-  _updateSelfMarkerRotation() {
-    if (!this._markersInited || this.data.markers.length < 1) return;
-    const heading = this._getEffectiveHeading();
-    this.setData({ 'markers[0].rotate': heading });
-  },
-
   _onMyLocationUpdate(loc) {
     if (!loc) return;
-    const effectiveHeading = this._getEffectiveHeading();
-    const myLoc = { latitude: loc.latitude, longitude: loc.longitude, heading: effectiveHeading, speed: loc.speed || 0 };
+    const myLoc = { latitude: loc.latitude, longitude: loc.longitude, heading: loc.heading || 0, speed: loc.speed || 0 };
     this._cachedMyLocation = myLoc;
 
     const updateData = {};
@@ -435,7 +391,7 @@ Page({
       });
     }
 
-    if (!this._markersInited || this.data.markers.length < 2) {
+    if (!this._markersInited || this.data.markers.length < 1) {
       this._initMapMarkers();
     } else {
       this._updateMarkerPositions();
@@ -453,13 +409,7 @@ Page({
     const partnerLoc = this._cachedPartnerLocation;
     if (!myLoc || !myLoc.latitude) return;
 
-    const markers = [{
-      id: 'self',
-      latitude: myLoc.latitude, longitude: myLoc.longitude,
-      iconPath: '/images/marker-self.svg', width: 28, height: 28,
-      callout: { content: '当前位置', display: 'ALWAYS', fontSize: 12, borderRadius: 10, bgColor: '#409eff', padding: 6, textAlign: 'center', color: '#fff' },
-      rotate: this._getEffectiveHeading(), anchor: { x: 0.5, y: 0.5 },
-    }];
+    const markers = [];
 
     if (partnerLoc && partnerLoc.latitude) {
       const label = this.data.partnerStale ? '暂未更新' : (this.data.partnerInfo.nickName || '对方');
@@ -467,36 +417,31 @@ Page({
       markers.push({
         id: 'partner',
         latitude: partnerLoc.latitude, longitude: partnerLoc.longitude,
-        iconPath: this.data.partnerInfo.avatarUrl || '/images/marker-self.svg', width: 28, height: 28,
+        iconPath: this.data.partnerInfo.avatarUrl || '/images/marker-partner.svg', width: 28, height: 28,
         callout: { content: callout, display: 'ALWAYS', fontSize: 12, borderRadius: 10, bgColor: '#07c160', padding: 6, textAlign: 'center', color: '#fff' },
         rotate: partnerLoc.heading || 0, anchor: { x: 0.5, y: 0.5 },
       });
     }
 
     this.setData({ markers });
-    if (myLoc && myLoc.latitude && partnerLoc && partnerLoc.latitude) this._markersInited = true;
+    if (partnerLoc && partnerLoc.latitude) this._markersInited = true;
     this._updatePolyline();
   },
 
   _updateMarkerPositions() {
-    const updateData = {};
-    const myLoc = this._cachedMyLocation;
+    if (!this._markersInited) return;
     const partnerLoc = this._cachedPartnerLocation;
-    if (myLoc && myLoc.latitude) {
-      updateData['markers[0].latitude'] = myLoc.latitude;
-      updateData['markers[0].longitude'] = myLoc.longitude;
-      updateData['markers[0].rotate'] = this._getEffectiveHeading();
-    }
     if (partnerLoc && partnerLoc.latitude) {
-      updateData['markers[1].latitude'] = partnerLoc.latitude;
-      updateData['markers[1].longitude'] = partnerLoc.longitude;
-      updateData['markers[1].rotate'] = partnerLoc.heading || 0;
+      this.setData({
+        'markers[0].latitude': partnerLoc.latitude,
+        'markers[0].longitude': partnerLoc.longitude,
+        'markers[0].rotate': partnerLoc.heading || 0,
+      });
     }
-    if (Object.keys(updateData).length > 0) this.setData(updateData);
   },
 
   _updateMarkerLabels() {
-    if (this.data.markers.length < 2) return;
+    if (this.data.markers.length < 1) return;
     const label = this.data.partnerStale ? '暂未更新' : (this.data.partnerInfo.nickName || '对方');
     const content = this.data.partnerLastUpdate ? label + ' · ' + this.data.partnerLastUpdate : label;
     this.setData({ 'markers[1].callout.content': content });
