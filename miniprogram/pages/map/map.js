@@ -49,6 +49,7 @@ Page({
   _locationWatchTimer: null,
   _unwatchLocation: null,
   _roomStatusWatcher: null,
+  _roomStatusPollTimer: null,
   _lastPartnerTimestamp: 0,
   _lastPartnerTick: 0,
   _partnerRawData: null,
@@ -243,8 +244,9 @@ Page({
 
   _startPollingPartner() {
     const POLL_INTERVAL = 5000;
+    // 如果已经停止了，不再轮询
+    if (this._locationWatchTimer === false) return;
     const poll = () => {
-      if (!this._locationWatchTimer) return;
       this._locationWatchTimer = setTimeout(async () => {
         try {
           const db = wx.cloud.database();
@@ -252,9 +254,12 @@ Page({
             .where({ roomId: this.roomId, userId: db.command.neq(this.userId) })
             .get();
           if (res.data && res.data.length > 0) {
+            console.log('🗺️ [map] 📡 轮询获取到对方位置');
             this._onPartnerLocationUpdate(res.data[0]);
           }
-        } catch (_) {}
+        } catch (err) {
+          console.warn('🗺️ [map] ⚠️ 轮询失败', err.errMsg || err.message || err);
+        }
         poll();
       }, POLL_INTERVAL);
     };
@@ -263,7 +268,7 @@ Page({
 
   _stopPolling() {
     if (this._locationWatchTimer) {
-      clearInterval(this._locationWatchTimer);
+      clearTimeout(this._locationWatchTimer);
       this._locationWatchTimer = null;
     }
   },
@@ -277,29 +282,67 @@ Page({
       this._roomStatusWatcher.close();
       this._roomStatusWatcher = null;
     }
+    if (this._roomStatusPollTimer) {
+      clearTimeout(this._roomStatusPollTimer);
+      this._roomStatusPollTimer = null;
+    }
   },
 
   /** 监听房间状态，ended 时自动返回首页 */
   _watchRoomStatus() {
     if (!this.roomId) return;
+    // 尝试 watch（如果实时推送可用）
     const db = wx.cloud.database();
     this._roomStatusWatcher = db.collection('rooms').doc(this.roomId).watch({
       onChange: (snapshot) => {
-        const room = snapshot.docs && snapshot.docs[0];
-        if (!room || room.status !== 'ended') return;
-        console.log('🗺️ [map] 🔚 共享已结束');
-        this._unwatch();
-        locationService.stopUpdating();
-        this._stopStaleCheck();
-        this._stopUiTimer();
-        this._stopPolling();
-        this._resetState();
-        app.clearRoom();
-        wx.showToast({ title: '对方已结束共享', icon: 'none' });
-        setTimeout(() => wx.navigateBack(), 1500);
+        this._onRoomStatusChange(snapshot);
       },
       onError: (err) => console.error('🗺️ [map] ❌ watch 房间状态失败', err),
     });
+    // 轮询备用（watch 不可用时生效）
+    this._startPollingRoomStatus();
+  },
+
+  /** 轮询房间状态（watch 不可用时的备用方案） */
+  _startPollingRoomStatus() {
+    if (!this.roomId) return;
+    const poll = () => {
+      if (this._roomStatusPollTimer === false) return;
+      this._roomStatusPollTimer = setTimeout(async () => {
+        try {
+          const db = wx.cloud.database();
+          const res = await db.collection('rooms').doc(this.roomId).get();
+          const room = res.data;
+          if (room && room.status === 'ended') {
+            console.log('🗺️ [map] 🔚 (轮询检测到) 共享已结束');
+            this._onRoomEnded();
+            return;
+          }
+        } catch (_) {}
+        poll();
+      }, 8000);
+    };
+    poll();
+  },
+
+  /** 房间结束处理 */
+  _onRoomStatusChange(snapshot) {
+    const room = snapshot.docs && snapshot.docs[0];
+    if (!room || room.status !== 'ended') return;
+    this._onRoomEnded();
+  },
+
+  _onRoomEnded() {
+    console.log('🗺️ [map] 🔚 共享已结束');
+    this._unwatch();
+    locationService.stopUpdating();
+    this._stopStaleCheck();
+    this._stopUiTimer();
+    this._stopPolling();
+    this._resetState();
+    app.clearRoom();
+    wx.showToast({ title: '对方已结束共享', icon: 'none' });
+    setTimeout(() => wx.navigateBack(), 1500);
   },
 
   // ====== 位置更新 ======
