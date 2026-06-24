@@ -21,7 +21,7 @@
   <!-- 顶部信息栏 -->
   <view class="info-bar">
     <view class="info-bar-left">
-      <image class="partner-avatar" src="{{partnerInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
+      <image class="partner-avatar" src="{{'/images/ic_js.svg'}}" mode="aspectFill" />
       <view class="partner-detail">
         <text class="partner-name">{{partnerInfo.nickName || '对方'}}</text>
         <view class="partner-status">

@@ -198,7 +198,7 @@ Page({
     }
 
     const userInfo = app.globalData.userInfo || {
-      nickName: '共享用户',
+      nickName: '拖车司机',
       avatarUrl: '',
     };
 

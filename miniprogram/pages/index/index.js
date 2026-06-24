@@ -93,7 +93,7 @@ Page({
       const granted = await locationService.requestPermission();
       if (!granted) { console.warn('🏠 [首页] ❌ 定位权限被拒绝'); return; }
     }
-    const userInfo = app.globalData.userInfo || { nickName: '共享用户', avatarUrl: '' };
+    const userInfo = app.globalData.userInfo || { nickName: '拖车司机', avatarUrl: '' };
     app.globalData.userInfo = userInfo;
     this._doCreateRoom(userInfo);
   },
