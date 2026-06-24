@@ -1,0 +1,80 @@
+<!-- 加入房间页 - 输入共享码 -->
+<view class="page">
+  <!-- 背景 -->
+  <view class="bg-decoration">
+    <view class="bg-circle bg-circle-1"></view>
+    <view class="bg-circle bg-circle-2"></view>
+  </view>
+
+  <!-- 返回按钮 -->
+  <view class="back-btn" bindtap="onBack">
+    <text>‹ 返回</text>
+  </view>
+
+  <!-- 标题 -->
+  <view class="header">
+    <text class="header-title">加入共享房间</text>
+    <text class="header-subtitle">输入对方提供的 6 位共享码</text>
+  </view>
+
+  <!-- 共享码输入区域 -->
+  <view class="code-input-area">
+    <view class="code-slots">
+      <view
+        class="code-slot {{item.filled ? 'filled' : ''}} {{item.active ? 'active' : ''}}"
+        wx:for="{{codeSlots}}"
+        wx:key="index"
+        data-index="{{index}}"
+        bindtap="onSlotTap"
+      >
+        <text>{{item.value}}</text>
+        <view class="cursor" wx:if="{{item.active}}"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 手机数字键盘（自定义） -->
+  <view class="num-keyboard">
+    <view class="keyboard-row">
+      <view class="key" data-value="1" bindtap="onKeyPress">1</view>
+      <view class="key" data-value="2" bindtap="onKeyPress">2</view>
+      <view class="key" data-value="3" bindtap="onKeyPress">3</view>
+    </view>
+    <view class="keyboard-row">
+      <view class="key" data-value="4" bindtap="onKeyPress">4</view>
+      <view class="key" data-value="5" bindtap="onKeyPress">5</view>
+      <view class="key" data-value="6" bindtap="onKeyPress">6</view>
+    </view>
+    <view class="keyboard-row">
+      <view class="key" data-value="7" bindtap="onKeyPress">7</view>
+      <view class="key" data-value="8" bindtap="onKeyPress">8</view>
+      <view class="key" data-value="9" bindtap="onKeyPress">9</view>
+    </view>
+    <view class="keyboard-row">
+      <view class="key key-empty"></view>
+      <view class="key" data-value="0" bindtap="onKeyPress">0</view>
+      <view class="key key-delete" bindtap="onDelete">
+        <text>⌫</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 手动清空按钮 -->
+  <view class="bottom-actions">
+    <text class="clear-btn" bindtap="onClear" wx:if="{{codeLength > 0}}">清空</text>
+    <text class="paste-btn" bindtap="onPaste" wx:if="{{!isScanning}}">粘贴共享码</text>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-overlay" wx:if="{{loading}}">
+    <view class="loading-box">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">正在加入房间...</text>
+    </view>
+  </view>
+
+  <!-- 错误提示 -->
+  <view class="error-toast" wx:if="{{errorMsg}}">
+    <text>{{errorMsg}}</text>
+  </view>
+</view>

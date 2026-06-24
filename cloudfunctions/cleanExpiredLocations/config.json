@@ -1,0 +1,9 @@
+{
+  "triggers": [
+    {
+      "name": "cleanTimer",
+      "type": "timer",
+      "config": "*/5 * * * *"
+    }
+  ]
+}

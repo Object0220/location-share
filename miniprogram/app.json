@@ -1,0 +1,25 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/map/map",
+    "pages/join/join"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#000000",
+    "navigationBarTitleText": "位置共享",
+    "navigationBarTextStyle": "white",
+    "navigationStyle": "custom"
+  },
+  "requiredBackgroundModes": ["location"],
+  "permission": {
+    "scope.userLocation": {
+      "desc": "你的位置信息将用于与共享伙伴实时查看彼此位置"
+    }
+  },
+  "requiredPrivateInfos": ["getLocation", "onLocationChange", "startLocationUpdate", "startLocationUpdateBackground"],
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "useExtendedLib": {
+    "weui": true
+  }
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#1a1a2e"/>
+  <circle cx="350" cy="50" r="120" fill="#07c160" opacity="0.15"/>
+  <circle cx="50" cy="280" r="80" fill="#07c160" opacity="0.1"/>
+  <text x="200" y="140" text-anchor="middle" font-size="24" fill="#fff" font-weight="bold">位置共享</text>
+  <text x="200" y="180" text-anchor="middle" font-size="14" fill="rgba(255,255,255,0.6)">实时查看彼此的位置</text>
+  <circle cx="200" cy="220" r="4" fill="#07c160"/>
+  <circle cx="185" cy="215" r="3" fill="#409eff"/>
+  <line x1="185" y1="215" x2="200" y2="220" stroke="#fff" stroke-width="1" opacity="0.4"/>
+</svg>

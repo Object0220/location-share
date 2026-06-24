@@ -1,0 +1,60 @@
+{
+  "envId": "cloud1-d8g3devjh29426fcc",
+  "functionRoot": "./cloudfunctions",
+  "functions": [
+    {
+      "name": "login",
+      "timeout": 15,
+      "memorySize": 256,
+      "installDependency": true,
+      "params": {},
+      "enablePublicNetworkAccess": false,
+      "scfBaseMode": "node_modules"
+    },
+    {
+      "name": "createRoom",
+      "timeout": 15,
+      "memorySize": 256,
+      "installDependency": true,
+      "params": {},
+      "enablePublicNetworkAccess": false,
+      "scfBaseMode": "node_modules"
+    },
+    {
+      "name": "joinRoom",
+      "timeout": 15,
+      "memorySize": 256,
+      "installDependency": true,
+      "params": {},
+      "enablePublicNetworkAccess": false,
+      "scfBaseMode": "node_modules"
+    },
+    {
+      "name": "getRoomInfo",
+      "timeout": 15,
+      "memorySize": 256,
+      "installDependency": true,
+      "params": {},
+      "enablePublicNetworkAccess": false,
+      "scfBaseMode": "node_modules"
+    },
+    {
+      "name": "leaveRoom",
+      "timeout": 15,
+      "memorySize": 256,
+      "installDependency": true,
+      "params": {},
+      "enablePublicNetworkAccess": false,
+      "scfBaseMode": "node_modules"
+    },
+    {
+      "name": "cleanExpiredLocations",
+      "timeout": 15,
+      "memorySize": 256,
+      "installDependency": true,
+      "params": {},
+      "enablePublicNetworkAccess": false,
+      "scfBaseMode": "node_modules"
+    }
+  ]
+}

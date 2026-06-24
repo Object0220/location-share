@@ -1,0 +1,86 @@
+/** 全局样式 */
+
+page {
+  --primary: #07c160;
+  --danger: #fa5151;
+  --warning: #ffc300;
+  --bg: #1a1a2e;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --text-primary: #333;
+  --text-secondary: #666;
+  --text-muted: #999;
+  --overlay: rgba(0, 0, 0, 0.5);
+}
+
+/** 安全区域适配 */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/** 半透明信息栏通用样式 */
+.info-bar {
+  position: absolute;
+  top: 44px;
+  left: 16px;
+  right: 16px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+/** 悬浮按钮通用样式 */
+.fab {
+  position: fixed;
+  z-index: 10;
+  border: none;
+  border-radius: 25px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+/** Toast 浮层 */
+.toast-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay);
+}
+
+.toast-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px 32px;
+  text-align: center;
+  max-width: 80%;
+}
+
+/** 骨架屏通用 */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
