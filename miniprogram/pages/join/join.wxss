@@ -1,234 +1,272 @@
-/** 加入房间页样式 */
+/** ===== 加入页样式 ===== */
 .page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: linear-gradient(170deg, #0f0f23 0%, #1a1a3e 40%, #16213e 70%, #0a1628 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 0 28px;
   position: relative;
   overflow: hidden;
 }
 
+/* ---- 背景装饰 ---- */
 .bg-decoration {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   pointer-events: none;
 }
 
-.bg-circle {
+.bg-glow {
   position: absolute;
   border-radius: 50%;
-  opacity: 0.1;
+  filter: blur(80px);
 }
 
-.bg-circle-1 {
-  width: 250px;
-  height: 250px;
-  background: #409eff;
+.bg-glow-1 {
+  width: 280px;
+  height: 280px;
+  background: rgba(64, 158, 255, 0.1);
   top: -100px;
   left: -80px;
 }
 
-.bg-circle-2 {
-  width: 180px;
-  height: 180px;
-  background: #409eff;
-  bottom: 200px;
+.bg-glow-2 {
+  width: 220px;
+  height: 220px;
+  background: rgba(64, 158, 255, 0.07);
+  bottom: 80px;
   right: -60px;
 }
 
-/* 返回按钮 */
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ---- 返回按钮 ---- */
 .back-btn {
   position: absolute;
-  top: 60px;
-  left: 16px;
-  padding: 8px 12px;
+  top: 54px;
+  left: 12px;
   z-index: 10;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
 }
 
-.back-btn text {
-  font-size: 17px;
-  color: rgba(255, 255, 255, 0.8);
+.back-icon {
+  font-size: 26px;
+  color: #fff;
+  line-height: 1;
 }
 
-/* 头部 */
-.header {
+/* ---- 顶部区域 ---- */
+.top-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding-top: 100px;
-  padding-bottom: 40px;
-  text-align: center;
-  z-index: 1;
+  padding-bottom: 36px;
 }
 
-.header-title {
-  font-size: 28px;
+.avatar-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: rgba(64, 158, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.avatar-icon {
+  font-size: 30px;
+}
+
+.page-title {
+  font-size: 26px;
   font-weight: 700;
   color: #fff;
-  display: block;
   margin-bottom: 8px;
+  letter-spacing: 0.5px;
 }
 
-.header-subtitle {
+.page-desc {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.6);
-  display: block;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 280px;
 }
 
-/* 共享码输入区域 */
-.code-input-area {
-  z-index: 1;
-  margin-bottom: 32px;
+/* ---- 输入卡片 ---- */
+.input-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 24px 32px;
+  width: 100%;
+  max-width: 320px;
+  text-align: center;
+  backdrop-filter: blur(12px);
+  margin-bottom: 28px;
 }
 
 .code-slots {
   display: flex;
-  gap: 10px;
+  justify-content: center;
+  gap: 12px;
 }
 
 .code-slot {
-  width: 48px;
-  height: 56px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
+  width: 56px;
+  height: 66px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  transition: all 0.2s;
+  transition: all 0.25s ease;
 }
 
 .code-slot.filled {
-  border-color: rgba(7, 193, 96, 0.5);
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(64, 158, 255, 0.15);
+  border-color: rgba(64, 158, 255, 0.4);
+  box-shadow: 0 0 20px rgba(64, 158, 255, 0.08);
 }
 
 .code-slot.active {
-  border-color: #07c160;
-  box-shadow: 0 0 12px rgba(7, 193, 96, 0.3);
+  border-color: #409eff;
+  box-shadow: 0 0 16px rgba(64, 158, 255, 0.2);
 }
 
-.code-slot text {
-  font-size: 26px;
-  font-weight: 700;
+.slot-text {
+  font-size: 28px;
+  font-weight: 800;
   color: #fff;
+  letter-spacing: 1px;
 }
 
-.cursor {
-  width: 2px;
-  height: 24px;
-  background: #07c160;
+.slot-cursor {
   position: absolute;
-  animation: blink 1s infinite;
+  bottom: 12px;
+  width: 2px;
+  height: 20px;
+  background: #409eff;
+  border-radius: 1px;
+  animation: cursor-blink 1s step-end infinite;
 }
 
-@keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
-/* 数字键盘 */
-.num-keyboard {
+.slot-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 14px;
+}
+
+/* ---- 数字键盘 ---- */
+.keyboard-area {
   width: 100%;
-  max-width: 340px;
-  z-index: 1;
-  margin-bottom: 16px;
+  max-width: 300px;
 }
 
-.keyboard-row {
+.kbd-row {
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 10px;
 }
 
-.key {
-  flex: 1;
-  height: 52px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+.kbd-key {
+  width: 76px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 500;
   color: #fff;
-  cursor: pointer;
-  user-select: none;
   transition: background 0.15s;
 }
 
-.key:active {
-  background: rgba(255, 255, 255, 0.2);
+.kbd-key:active {
+  background: rgba(255, 255, 255, 0.14);
 }
 
-.key-empty {
+.kbd-empty {
   background: transparent;
   pointer-events: none;
 }
 
-.key-delete {
+.kbd-delete-icon {
   font-size: 20px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
-/* 底部操作 */
+/* ---- 底部操作 ---- */
 .bottom-actions {
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 40px;
-}
-
-.clear-btn, .paste-btn {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.6);
-  padding: 4px 12px;
-}
-
-.scan-btn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 22px;
-  padding: 10px 32px;
-  font-size: 15px;
-  color: #fff;
-  line-height: 1.5;
-}
-
-/* 加载状态 */
-.loading-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  width: 100%;
+  text-align: center;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  gap: 24px;
+  margin-top: 8px;
+  margin-bottom: 20px;
 }
 
-.loading-box {
-  background: #fff;
-  border-radius: 16px;
-  padding: 32px 40px;
+.clear-btn, .paste-btn {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.35);
+  padding: 6px 12px;
+}
+
+/* ---- 内嵌加载 ---- */
+.inline-loading {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 16px;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 24px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 40px;
+  animation: fadeInUp 0.3s ease;
 }
 
 .loading-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid #e0e0e0;
-  border-top-color: var(--primary);
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #409eff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
 }
 
 @keyframes spin {
@@ -236,19 +274,20 @@
 }
 
 .loading-text {
-  font-size: 15px;
-  color: #333;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
 }
 
-/* 错误提示 */
+/* ---- 错误提示 ---- */
 .error-toast {
   position: fixed;
-  bottom: 120px;
-  left: 24px;
-  right: 24px;
-  background: rgba(250, 81, 81, 0.9);
-  border-radius: 10px;
-  padding: 12px 16px;
+  bottom: 160px;
+  left: 28px;
+  right: 28px;
+  background: rgba(250, 81, 81, 0.88);
+  backdrop-filter: blur(12px);
+  border-radius: 14px;
+  padding: 14px 20px;
   text-align: center;
   z-index: 40;
   animation: fadeInUp 0.3s ease;
@@ -257,6 +296,7 @@
 .error-toast text {
   font-size: 14px;
   color: #fff;
+  line-height: 1.5;
 }
 
 @keyframes fadeInUp {

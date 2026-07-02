@@ -187,6 +187,7 @@ Page({
       this.setData({ loading: false });
 
       console.log('🔗 [加入页] ✅ 加入成功! roomId=' + result.roomId + ' 司机=' + (result.partnerInfo ? result.partnerInfo.nickName : '无'));
+      wx.hideToast();
       wx.showToast({ title: '加入成功', icon: 'success' });
 
       setTimeout(() => {
