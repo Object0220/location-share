@@ -14,7 +14,7 @@
   <!-- 标题 -->
   <view class="header">
     <text class="header-title">加入救援</text>
-    <text class="header-subtitle">输入拖车司机提供的 4 位共享码</text>
+    <text class="header-subtitle">输入拖车司机的手机号后四位</text>
   </view>
 
   <!-- 共享码输入区域 -->
@@ -62,7 +62,7 @@
   <!-- 手动清空按钮 -->
   <view class="bottom-actions">
     <text class="clear-btn" bindtap="onClear" wx:if="{{codeLength > 0}}">清空</text>
-    <text class="paste-btn" bindtap="onPaste" wx:if="{{!isScanning}}">粘贴共享码</text>
+    <text class="paste-btn" bindtap="onPaste" wx:if="{{!isScanning}}">粘贴手机号</text>
   </view>
 
   <!-- 加载状态 -->

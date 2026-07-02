@@ -1,4 +1,4 @@
-<!-- 等待页 - 创建房间后显示共享码，等待客户加入 -->
+<!-- 等待页 - 输入手机号后4位 → 创建房间 → 等待客户加入 -->
 <view class="page">
   <!-- 背景装饰 -->
   <view class="bg-decoration">
@@ -12,31 +12,79 @@
     <text class="back-text">返回</text>
   </view>
 
-  <!-- 主内容 -->
-  <view class="main-content">
-    <!-- 标题 -->
+  <!-- ===== 第一阶段：输入手机号后4位 ===== -->
+  <view class="main-content" wx:if="{{showPhoneInput}}">
+    <view class="header">
+      <text class="header-icon">🚛</text>
+      <text class="header-title">创建救援房间</text>
+      <text class="header-subtitle">请输入您的手机号后四位，客户将通过此号码加入</text>
+    </view>
+
+    <!-- 手机号后4位输入卡片 -->
+    <view class="code-card">
+      <view class="code-digits">
+        <text class="code-digit {{item ? 'filled' : ''}}"
+              wx:for="{{phoneDigits}}" wx:key="index">{{item}}</text>
+      </view>
+      <text class="input-hint">手机号后四位</text>
+    </view>
+
+    <!-- 数字键盘 -->
+    <view class="num-keyboard">
+      <view class="keyboard-row">
+        <view class="key" data-value="1" bindtap="onPhoneKeyPress">1</view>
+        <view class="key" data-value="2" bindtap="onPhoneKeyPress">2</view>
+        <view class="key" data-value="3" bindtap="onPhoneKeyPress">3</view>
+      </view>
+      <view class="keyboard-row">
+        <view class="key" data-value="4" bindtap="onPhoneKeyPress">4</view>
+        <view class="key" data-value="5" bindtap="onPhoneKeyPress">5</view>
+        <view class="key" data-value="6" bindtap="onPhoneKeyPress">6</view>
+      </view>
+      <view class="keyboard-row">
+        <view class="key" data-value="7" bindtap="onPhoneKeyPress">7</view>
+        <view class="key" data-value="8" bindtap="onPhoneKeyPress">8</view>
+        <view class="key" data-value="9" bindtap="onPhoneKeyPress">9</view>
+      </view>
+      <view class="keyboard-row">
+        <view class="key key-empty"></view>
+        <view class="key" data-value="0" bindtap="onPhoneKeyPress">0</view>
+        <view class="key key-delete" bindtap="onPhoneDelete">
+          <text>⌫</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="bottom-actions">
+      <text class="clear-btn" bindtap="onPhoneClear" wx:if="{{phoneLength > 0}}">清空</text>
+    </view>
+
+    <button class="btn-start" bindtap="onStartCreate" wx:if="{{phoneLength == 4}}">
+      创建救援房间
+    </button>
+  </view>
+
+  <!-- ===== 第二阶段：等待客户加入 ===== -->
+  <view class="main-content" wx:if="{{showWaiting}}">
     <view class="header">
       <text class="header-icon">🔗</text>
       <text class="header-title">救援房间已创建</text>
-      <text class="header-subtitle">将下方共享码发送给客户即可加入</text>
+      <text class="header-subtitle">请将手机号后四位告知客户</text>
     </view>
 
-    <!-- 共享码卡片 -->
     <view class="code-card">
       <view class="code-digits">
         <text class="code-digit" wx:for="{{shareCodeArray}}" wx:key="*this">{{item}}</text>
       </view>
     </view>
 
-    <!-- 操作 -->
     <view class="actions">
       <button class="btn-copy" bindtap="onCopyCode">
         <text class="btn-icon">📋</text>
-        <text>复制共享码</text>
+        <text>复制手机号后四位</text>
       </button>
     </view>
 
-    <!-- 等待状态 -->
     <view class="waiting-section">
       <view class="loading-dots">
         <view class="dot"></view>
@@ -46,7 +94,6 @@
       <text class="waiting-text">等待客户加入...</text>
     </view>
 
-    <!-- 取消按钮 -->
     <button class="btn-cancel" bindtap="onCancelRoom">取消救援</button>
   </view>
 </view>

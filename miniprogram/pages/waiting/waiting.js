@@ -1,6 +1,6 @@
 /**
- * 等待页 - 创建房间、显示共享码、等待客户加入
- * 拖车司机点击「我是拖车司机」后跳转至此页
+ * 等待页 - 拖车司机输入手机号后4位、创建房间、等待客户加入
+ * 首页点击「我是拖车司机」后跳转至此页
  */
 const app = getApp();
 const roomService = require('../../services/room');
@@ -8,6 +8,13 @@ const locationService = require('../../services/location');
 
 Page({
   data: {
+    // 输入手机号阶段
+    showPhoneInput: true,
+    phoneDigits: ['', '', '', ''],
+    phoneLength: 0,
+
+    // 等待阶段
+    showWaiting: false,
     shareCode: '',
     shareCodeArray: [],
   },
@@ -17,17 +24,75 @@ Page({
   _watchRetryTimer: null,
   _watchRetryCount: 0,
 
-  async onLoad() {
-    console.log('⏳ [waiting] onLoad — 开始创建房间');
+  onLoad() {
+    console.log('⏳ [waiting] onLoad — 输入手机号后4位');
+  },
 
-    // 1. 请求定位权限（需要定位才能创建房间共享位置）
+  onUnload() {
+    console.log('⏳ [waiting] onUnload');
+    this._closeWatcher();
+  },
+
+  // ====== 手机号输入事件 ======
+
+  onPhoneKeyPress(e) {
+    const value = e.currentTarget.dataset.value;
+    if (this.data.phoneLength >= 4) return;
+
+    const digits = [...this.data.phoneDigits];
+    digits[this.data.phoneLength] = value;
+    this.setData({
+      phoneDigits: digits,
+      phoneLength: this.data.phoneLength + 1,
+    });
+  },
+
+  onPhoneDelete() {
+    if (this.data.phoneLength <= 0) return;
+    const digits = [...this.data.phoneDigits];
+    digits[this.data.phoneLength - 1] = '';
+    this.setData({
+      phoneDigits: digits,
+      phoneLength: this.data.phoneLength - 1,
+    });
+  },
+
+  onPhoneClear() {
+    this.setData({
+      phoneDigits: ['', '', '', ''],
+      phoneLength: 0,
+    });
+  },
+
+  // ====== 事件 ======
+
+  onBack() {
+    if (this.data.showPhoneInput) {
+      wx.navigateBack();
+    } else {
+      // 等待模式返回视为放弃
+      this._closeWatcher();
+      app.clearRoom();
+      wx.navigateBack();
+    }
+  },
+
+  /** 开始创建救援房间 */
+  async onStartCreate() {
+    if (this.data.phoneLength < 4) {
+      wx.showToast({ title: '请输入手机号后四位', icon: 'none' });
+      return;
+    }
+
+    const phoneLast4 = this.data.phoneDigits.join('');
+
+    // 1. 请求定位权限
     const perm = await locationService.checkPermission();
     if (!perm.granted) {
       const granted = await locationService.requestPermission();
       if (!granted) {
         console.warn('⏳ [waiting] ❌ 定位权限被拒绝');
         wx.showToast({ title: '需要定位权限', icon: 'none' });
-        setTimeout(() => wx.redirectTo({ url: '/pages/index/index' }), 1500);
         return;
       }
     }
@@ -36,54 +101,41 @@ Page({
     const userInfo = app.globalData.userInfo || { nickName: '拖车司机', avatarUrl: '' };
     app.globalData.userInfo = userInfo;
 
-    // 3. 调用云函数创建房间
+    // 3. 创建房间（用手机号后4位作为共享码）
     console.log('⏳ [waiting] ⏳ 正在创建房间...');
     wx.showLoading({ title: '创建房间...' });
     try {
-      const result = await roomService.createRoom(userInfo);
+      const result = await roomService.createRoom(userInfo, phoneLast4);
       wx.hideLoading();
 
       console.log('⏳ [waiting] ✅ 房间创建成功 shareCode=' + result.shareCode + ' roomId=' + result.roomId);
 
       this.roomId = result.roomId;
       this.setData({
+        showPhoneInput: false,
+        showWaiting: true,
         shareCode: result.shareCode,
         shareCodeArray: result.shareCode.split(''),
       });
 
-      // 4. 开始监听房间状态（等待对方加入）
+      // 4. 开始监听房间状态
       this._watchRoomStatus(result.roomId);
     } catch (err) {
       wx.hideLoading();
       console.error('⏳ [waiting] ❌ 创建房间失败', err.message || err);
       wx.showToast({ title: '创建失败，请重试', icon: 'none' });
-      setTimeout(() => wx.redirectTo({ url: '/pages/index/index' }), 1500);
     }
-  },
-
-  onUnload() {
-    console.log('⏳ [waiting] onUnload');
-    this._closeWatcher();
-  },
-
-  // ====== 事件 ======
-
-  onBack() {
-    // 返回首页视为放弃，清理房间状态
-    this._closeWatcher();
-    app.clearRoom();
-    wx.navigateBack();
   },
 
   /** 复制共享码 */
   onCopyCode() {
     wx.setClipboardData({
       data: this.data.shareCode,
-      success: () => wx.showToast({ title: '已复制共享码', icon: 'none' }),
+      success: () => wx.showToast({ title: '已复制手机号后四位', icon: 'none' }),
     });
   },
 
-  /** 取消共享 */
+  /** 取消救援 */
   onCancelRoom() {
     const that = this;
     wx.showModal({
@@ -99,7 +151,7 @@ Page({
     });
   },
 
-  /** 执行取消共享 */
+  /** 执行取消 */
   async _doCancelRoom() {
     try {
       this._closeWatcher();
@@ -111,7 +163,7 @@ Page({
       }
       wx.navigateBack();
     } catch (err) {
-      console.error('⏳ [waiting] ❌ 取消共享失败', err);
+      console.error('⏳ [waiting] ❌ 取消救援失败', err);
       app.clearRoom();
       wx.navigateBack();
     }
@@ -119,7 +171,6 @@ Page({
 
   // ====== 监听房间状态 ======
 
-  /** 监听房间，检测对方加入 */
   _watchRoomStatus(roomId) {
     if (!roomId) return;
     console.log('⏳ [waiting] 📡 开始监听房间 roomId=' + roomId);
@@ -145,10 +196,10 @@ Page({
         }
 
         if (room.status === 'ended') {
-          console.log('⏳ [waiting] 🔚 共享已结束');
+          console.log('⏳ [waiting] 🔚 救援已结束');
           this._closeWatcher();
           app.clearRoom();
-          wx.showToast({ title: '共享已结束', icon: 'none' });
+          wx.showToast({ title: '救援已结束', icon: 'none' });
           setTimeout(() => wx.redirectTo({ url: '/pages/index/index' }), 1500);
         }
       },
@@ -160,7 +211,6 @@ Page({
     });
   },
 
-  /** 失败重试（指数退避） */
   _scheduleWatchRetry(roomId) {
     this._watchRetryCount = (this._watchRetryCount || 0) + 1;
     const delay = Math.min(1000 * Math.pow(2, this._watchRetryCount - 1), 30000);

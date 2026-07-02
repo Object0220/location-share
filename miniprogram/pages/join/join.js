@@ -7,7 +7,7 @@ const locationService = require('../../services/location');
 
 Page({
   data: {
-    codeValue: '',           // 4 位共享码
+    codeValue: '',           // 手机号后4位
     codeLength: 0,
     codeSlots: [
       { value: '', filled: false, active: false },
@@ -112,7 +112,7 @@ Page({
   },
 
   /**
-   * 粘贴共享码
+   * 粘贴手机号后四位
    */
   onPaste() {
     const that = this;
@@ -126,34 +126,12 @@ Page({
           that.setData({ codeValue: digits, errorMsg: '' });
           that._doJoin(digits);
         } else if (digits.length > 0) {
-          that.setData({ errorMsg: '共享码格式不正确，请输入4位数字' });
+          that.setData({ errorMsg: '请输入手机号后4位数字' });
           that._updateSlots(digits);
           that.setData({ codeValue: digits });
         }
       },
     });
-  },
-
-  /**
-   * 扫码
-   */
-  onScanCode(e) {
-    this.setData({ isScanning: true });
-    const result = e.detail.result;
-    if (result) {
-      // 提取共享码：可能是直接数字，也可能是 URL 参数
-      const codeMatch = result.match(/(?:code=)?(\d{4})/);
-      const code = codeMatch ? codeMatch[1] : result.replace(/\D/g, '').slice(0, 4);
-
-      if (code.length === 4) {
-        this._updateSlots(code);
-        this.setData({ codeValue: code, errorMsg: '' });
-        this._doJoin(code);
-      } else {
-        this.setData({ errorMsg: '未能识别有效的共享码' });
-      }
-    }
-    this.setData({ isScanning: false });
   },
 
   // ====== 内部方法 ======
@@ -221,7 +199,7 @@ Page({
       this.setData({ loading: false });
       console.error('🔗 [加入页] ❌ 加入失败', err.message || err);
 
-      const errorMsg = err.message || '加入失败，请检查共享码是否正确';
+      const errorMsg = err.message || '加入失败，请检查手机号后四位是否正确';
       this.setData({ errorMsg });
 
       this._errorTimer = setTimeout(() => {

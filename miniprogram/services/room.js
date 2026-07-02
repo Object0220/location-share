@@ -13,9 +13,10 @@ module.exports = {
   /**
    * 创建共享房间（配对发起方）
    * @param {object} userInfo - { nickName, avatarUrl }
+   * @param {string} [phoneLast4] - 手机号后4位，用作共享码
    * @returns {Promise<{roomId, shareCode, qrcodeUrl}>}
    */
-  async createRoom(userInfo) {
+  async createRoom(userInfo, phoneLast4) {
     const app = getAppInstance();
     // 等待 openid 就绪（首次打开可能还在获取中）
     const openid = await app.waitForOpenId();
@@ -24,7 +25,7 @@ module.exports = {
       return Promise.reject(new Error('未获取到用户标识'));
     }
 
-    const shareCode = this._generateShareCode();
+    const shareCode = phoneLast4 || this._generateShareCode();
     const roomId = 'room_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 
     console.log('🏠 [createRoom] 🚀 调用云函数 roomId=' + roomId + ' shareCode=' + shareCode + ' user=' + (userInfo.nickName || '匿名'));
@@ -63,8 +64,8 @@ module.exports = {
   },
 
   /**
-   * 通过共享码加入房间
-   * @param {string} shareCode - 共享码
+   * 通过司机手机号后4位加入房间
+   * @param {string} shareCode - 手机号后4位
    * @param {object} userInfo - { nickName, avatarUrl }
    * @returns {Promise<{roomId, roomData}>}
    */
