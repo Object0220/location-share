@@ -65,7 +65,7 @@ exports.main = async (event, context) => {
         shareCode,
         userA: {
           userId: openid,
-          nickName: userA.nickName || '用户',
+          nickName: userA.nickName || '拖车司机',
           avatarUrl: userA.avatarUrl || '',
         },
         userB: {},

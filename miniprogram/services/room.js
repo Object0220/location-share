@@ -36,7 +36,7 @@ module.exports = {
         shareCode,
         userA: {
           userId: openid,
-          nickName: userInfo.nickName || '用户A',
+          nickName: userInfo.nickName || '拖车司机',
           avatarUrl: userInfo.avatarUrl || '',
         },
       },
@@ -85,7 +85,7 @@ module.exports = {
         shareCode: shareCode.toUpperCase(),
         userB: {
           userId: openid,
-          nickName: userInfo.nickName || '用户B',
+          nickName: userInfo.nickName || '客户',
           avatarUrl: userInfo.avatarUrl || '',
         },
       },
@@ -111,7 +111,7 @@ module.exports = {
   },
 
   /**
-   * 获取房间信息和对方位置
+   * 获取房间信息和客户位置
    * @param {string} roomId
    * @returns {Promise<{roomData, partnerLocation}>}
    */
@@ -148,10 +148,10 @@ module.exports = {
   },
 
   /**
-   * 订阅对方位置变化（云开发实时数据推送）
+   * 订阅客户位置变化（云开发实时数据推送）
    * @param {string} roomId
    * @param {string} myUserId - 自己的 userId
-   * @param {function} onLocationUpdate - 对方位置更新回调
+   * @param {function} onLocationUpdate - 客户位置更新回调
    * @returns {function} unwatch 函数
    */
   watchPartnerLocation(roomId, myUserId, onLocationUpdate) {
@@ -189,7 +189,7 @@ module.exports = {
   },
 
   /**
-   * 获取配对信息（对方昵称、头像）
+   * 获取配对信息（客户昵称、头像）
    * 统一走云函数，与 getRoomInfo 保持一致
    * @param {string} roomId
    * @returns {Promise<object|null>}

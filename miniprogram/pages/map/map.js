@@ -2,7 +2,7 @@
  * 地图页 - 核心位置共享页面
  *
  * 功能：
- * - 实时显示自己和对方的位置
+ * - 实时显示拖车司机和客户的位置
  * - 自动调整地图显示范围
  * - 方向指示、距离计算
  * - 后台定位支持
@@ -29,7 +29,7 @@ Page({
     markers: [],
     polyline: [],
     satelliteMode: false,
-    partnerInfo: { nickName: '对方', avatarUrl: '' },
+    partnerInfo: { nickName: '客户', avatarUrl: '' },
     partnerOnline: false,
     wsConnected: true,
     partnerLastUpdate: '',
@@ -120,19 +120,19 @@ Page({
 
   onEndShare() {
     wx.showModal({
-      title: '结束共享',
-      content: '确定要结束位置共享吗？对方将不再看到你的位置。',
+      title: '结束救援',
+      content: '确定要结束救援吗？客户将不再看到你的位置。',
       confirmColor: '#fa5151',
       success: async (res) => {
         if (!res.confirm) return;
         try {
-          wx.showLoading({ title: '结束共享...' });
+          wx.showLoading({ title: '结束救援...' });
           await roomService.leaveRoom(this.roomId);
           wx.hideLoading();
           wx.navigateBack({ delta: 2 });
         } catch (err) {
           wx.hideLoading();
-          console.error('结束共享失败', err);
+          console.error('结束救援失败', err);
           app.clearRoom();
           wx.navigateBack({ delta: 2 });
         }
@@ -209,7 +209,7 @@ Page({
     if (room.partnerInfo) {
       this.setData({
         partnerInfo: {
-          nickName: room.partnerInfo.nickName || '对方',
+          nickName: room.partnerInfo.nickName || '客户',
           avatarUrl: room.partnerInfo.avatarUrl || '',
         },
       });
@@ -341,7 +341,7 @@ Page({
     this._stopPolling();
     this._resetState();
     app.clearRoom();
-    wx.showToast({ title: '对方已结束共享', icon: 'none' });
+    wx.showToast({ title: '客户已结束救援', icon: 'none' });
     setTimeout(() => wx.navigateBack(), 1500);
   },
 
@@ -412,7 +412,7 @@ Page({
     const markers = [];
 
     if (partnerLoc && partnerLoc.latitude) {
-      const label = this.data.partnerStale ? '暂未更新' : (this.data.partnerInfo.nickName || '对方');
+      const label = this.data.partnerStale ? '暂未更新' : (this.data.partnerInfo.nickName || '客户');
       const callout = this.data.partnerLastUpdate ? label + ' · ' + this.data.partnerLastUpdate : label;
       markers.push({
         id: 'partner',
@@ -442,7 +442,7 @@ Page({
 
   _updateMarkerLabels() {
     if (this.data.markers.length < 1) return;
-    const label = this.data.partnerStale ? '暂未更新' : (this.data.partnerInfo.nickName || '对方');
+    const label = this.data.partnerStale ? '暂未更新' : (this.data.partnerInfo.nickName || '客户');
     const content = this.data.partnerLastUpdate ? label + ' · ' + this.data.partnerLastUpdate : label;
     this.setData({ 'markers[1].callout.content': content });
   },

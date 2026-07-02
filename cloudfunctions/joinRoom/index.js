@@ -76,7 +76,7 @@ exports.main = async (event, context) => {
         data: {
           userB: _.set({
             userId: openid,
-            nickName: userB.nickName || '用户',
+            nickName: userB.nickName || '客户',
             avatarUrl: userB.avatarUrl || '',
           }),
           status: 'active',

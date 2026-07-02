@@ -24,7 +24,7 @@
     <view class="info-bar-left">
       <image class="partner-avatar" src="{{'/images/ic_js.svg'}}" mode="aspectFill" />
       <view class="partner-detail">
-        <text class="partner-name">{{partnerInfo.nickName || '对方'}}</text>
+        <text class="partner-name">{{partnerInfo.nickName || '客户'}}</text>
         <view class="partner-status">
           <view class="status-dot {{partnerOnline ? 'online' : 'offline'}}"></view>
           <text class="status-text">{{partnerOnline ? '在线' : '离线'}}</text>
@@ -56,9 +56,9 @@
     <button class="location-retry-btn" bindtap="onRetryLocation">重试</button>
   </view>
 
-  <!-- 对方位置很久未更新提示 -->
+  <!-- 客户位置很久未更新提示 -->
   <view class="stale-notice" wx:if="{{partnerStale}}">
-    <text>⏳ 对方位置暂未更新</text>
+    <text>⏳ 客户位置暂未更新</text>
   </view>
 
   <!-- 对方详情弹窗 -->
@@ -68,7 +68,7 @@
       <view class="sheet-header">
         <image class="sheet-avatar" src="{{partnerInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
         <view class="sheet-meta">
-          <text class="sheet-name">{{partnerInfo.nickName || '对方'}}</text>
+          <text class="sheet-name">{{partnerInfo.nickName || '客户'}}</text>
           <view class="sheet-online">
             <view class="online-dot {{partnerOnline ? '' : 'off'}}"></view>
             <text>{{partnerOnline ? '在线' : '离线'}}</text>

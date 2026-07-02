@@ -1,6 +1,6 @@
 /**
- * 等待页 - 创建房间、显示共享码、等待对方加入
- * 独立页面，首页点击「创建共享房间」直接跳转至此页
+ * 等待页 - 创建房间、显示共享码、等待客户加入
+ * 拖车司机点击「我是拖车司机」后跳转至此页
  */
 const app = getApp();
 const roomService = require('../../services/room');
@@ -87,8 +87,8 @@ Page({
   onCancelRoom() {
     const that = this;
     wx.showModal({
-      title: '取消共享',
-      content: '确定要取消当前房间吗？',
+      title: '取消救援',
+      content: '确定要取消当前救援吗？',
       success(res) {
         if (!res.confirm) return;
         that._doCancelRoom();
@@ -134,13 +134,13 @@ Page({
         console.log('⏳ [waiting] 📡 watch 更新: 状态=' + room.status + ' userB=' + (room.userB ? room.userB.nickName : 'null'));
 
         if (room.status === 'active' && room.userB) {
-          console.log('⏳ [waiting] 🎉 对方已加入! nickName=' + room.userB.nickName);
+          console.log('⏳ [waiting] 🎉 客户已加入! nickName=' + room.userB.nickName);
           this._closeWatcher();
           app.saveRoom({
             roomId: room._id, shareCode: room.shareCode,
             role: 'A', status: 'active', partnerInfo: room.userB,
           });
-          wx.showToast({ title: '对方已加入', icon: 'success' });
+          wx.showToast({ title: '客户已加入', icon: 'success' });
           setTimeout(() => wx.redirectTo({ url: '/pages/map/map' }), 1000);
         }
 

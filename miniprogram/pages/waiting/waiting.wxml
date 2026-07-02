@@ -1,4 +1,4 @@
-<!-- 等待页 - 创建房间后显示共享码，等待对方加入 -->
+<!-- 等待页 - 创建房间后显示共享码，等待客户加入 -->
 <view class="page">
   <!-- 背景装饰 -->
   <view class="bg-decoration">
@@ -17,8 +17,8 @@
     <!-- 标题 -->
     <view class="header">
       <text class="header-icon">🔗</text>
-      <text class="header-title">共享房间已创建</text>
-      <text class="header-subtitle">将下方共享码发送给对方即可加入</text>
+      <text class="header-title">救援房间已创建</text>
+      <text class="header-subtitle">将下方共享码发送给客户即可加入</text>
     </view>
 
     <!-- 共享码卡片 -->
@@ -43,10 +43,10 @@
         <view class="dot"></view>
         <view class="dot"></view>
       </view>
-      <text class="waiting-text">等待对方加入...</text>
+      <text class="waiting-text">等待客户加入...</text>
     </view>
 
     <!-- 取消按钮 -->
-    <button class="btn-cancel" bindtap="onCancelRoom">取消共享</button>
+    <button class="btn-cancel" bindtap="onCancelRoom">取消救援</button>
   </view>
 </view>

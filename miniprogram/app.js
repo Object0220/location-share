@@ -1,5 +1,5 @@
 /**
- * 双人实时位置共享小程序
+ * 道路救援位置共享小程序
  * App 实例
  */
 const config = require('./env-config');

@@ -198,7 +198,7 @@ Page({
     }
 
     const userInfo = app.globalData.userInfo || {
-      nickName: '拖车司机',
+      nickName: '客户',
       avatarUrl: '',
     };
 
@@ -208,7 +208,7 @@ Page({
       const result = await roomService.joinRoom(code, userInfo);
       this.setData({ loading: false });
 
-      console.log('🔗 [加入页] ✅ 加入成功! roomId=' + result.roomId + ' 对方=' + (result.partnerInfo ? result.partnerInfo.nickName : '无'));
+      console.log('🔗 [加入页] ✅ 加入成功! roomId=' + result.roomId + ' 司机=' + (result.partnerInfo ? result.partnerInfo.nickName : '无'));
       wx.showToast({ title: '加入成功', icon: 'success' });
 
       setTimeout(() => {
