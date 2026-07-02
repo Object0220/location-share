@@ -84,24 +84,37 @@ Page({
   },
 
   /** 取消共享 */
-  async onCancelRoom() {
+  onCancelRoom() {
+    const that = this;
     wx.showModal({
       title: '取消共享',
       content: '确定要取消当前房间吗？',
-      success: async (res) => {
+      success(res) {
         if (!res.confirm) return;
-        try {
-          const room = app.globalData.currentRoom;
-          if (room) await roomService.leaveRoom(room.roomId);
-          app.clearRoom();
-          wx.navigateBack();
-        } catch (err) {
-          console.error('取消共享失败', err);
-          app.clearRoom();
-          wx.navigateBack();
-        }
+        that._doCancelRoom();
+      },
+      fail(err) {
+        console.error('⏳ [waiting] ❌ 弹窗失败', err);
       },
     });
+  },
+
+  /** 执行取消共享 */
+  async _doCancelRoom() {
+    try {
+      this._closeWatcher();
+      const room = app.globalData.currentRoom;
+      if (room && room.roomId) {
+        await roomService.leaveRoom(room.roomId);
+      } else {
+        app.clearRoom();
+      }
+      wx.navigateBack();
+    } catch (err) {
+      console.error('⏳ [waiting] ❌ 取消共享失败', err);
+      app.clearRoom();
+      wx.navigateBack();
+    }
   },
 
   // ====== 监听房间状态 ======
