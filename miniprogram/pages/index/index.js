@@ -2,8 +2,6 @@
  * 首页 - 创建/加入共享房间
  */
 const app = getApp();
-const roomService = require('../../services/room');
-const locationService = require('../../services/location');
 
 Page({
   data: {
@@ -62,36 +60,14 @@ Page({
   onHide() {},
   onUnload() {},
 
-  /** 创建共享房间 */
-  async onCreateRoom() {
-    console.log('🏠 [首页] 👆 点击「创建共享房间」');
-    const perm = await locationService.checkPermission();
-    if (!perm.granted) {
-      const granted = await locationService.requestPermission();
-      if (!granted) { console.warn('🏠 [首页] ❌ 定位权限被拒绝'); return; }
-    }
-    const userInfo = app.globalData.userInfo || { nickName: '拖车司机', avatarUrl: '' };
-    app.globalData.userInfo = userInfo;
-    this._doCreateRoom(userInfo);
+  /** 创建共享房间 — 直接跳转到等待页，由等待页负责创建 */
+  onCreateRoom() {
+    console.log('🏠 [首页] 👆 点击「创建共享房间」→ 跳转到等待页');
+    wx.navigateTo({ url: '/pages/waiting/waiting' });
   },
 
-  onJoinRoom() { wx.navigateTo({ url: '/pages/join/join' }); },
-
-  /** 执行创建房间 → 跳转到独立等待页 */
-  async _doCreateRoom(userInfo) {
-    console.log('🏠 [首页] ⏳ 正在创建房间...');
-    wx.showLoading({ title: '创建房间...' });
-    try {
-      const result = await roomService.createRoom(userInfo);
-      console.log('🏠 [首页] ✅ 房间创建成功 shareCode=' + result.shareCode);
-      wx.hideLoading();
-      // 跳转到独立等待页，由等待页管理房间监听和后续跳转
-      wx.redirectTo({ url: '/pages/waiting/waiting' });
-    } catch (err) {
-      wx.hideLoading();
-      console.error('🏠 [首页] ❌ 创建房间失败', err.message || err);
-      this._showToast('创建失败，请重试');
-    }
+  onJoinRoom() {
+    wx.navigateTo({ url: '/pages/join/join' });
   },
 
   /** Toast 提示 */

@@ -1,9 +1,10 @@
 /**
- * 等待页 - 创建房间后显示共享码，等待对方加入
- * 独立页面，替代原有的模态弹窗
+ * 等待页 - 创建房间、显示共享码、等待对方加入
+ * 独立页面，首页点击「创建共享房间」直接跳转至此页
  */
 const app = getApp();
 const roomService = require('../../services/room');
+const locationService = require('../../services/location');
 
 Page({
   data: {
@@ -16,21 +17,48 @@ Page({
   _watchRetryTimer: null,
   _watchRetryCount: 0,
 
-  onLoad() {
-    console.log('⏳ [waiting] onLoad');
-    const room = app.globalData.currentRoom;
-    if (!room || !room.shareCode) {
-      console.warn('⏳ [waiting] ⚠️ 无房间信息，返回首页');
-      wx.redirectTo({ url: '/pages/index/index' });
-      return;
+  async onLoad() {
+    console.log('⏳ [waiting] onLoad — 开始创建房间');
+
+    // 1. 请求定位权限（需要定位才能创建房间共享位置）
+    const perm = await locationService.checkPermission();
+    if (!perm.granted) {
+      const granted = await locationService.requestPermission();
+      if (!granted) {
+        console.warn('⏳ [waiting] ❌ 定位权限被拒绝');
+        wx.showToast({ title: '需要定位权限', icon: 'none' });
+        setTimeout(() => wx.redirectTo({ url: '/pages/index/index' }), 1500);
+        return;
+      }
     }
-    this.roomId = room.roomId;
-    this.setData({
-      shareCode: room.shareCode,
-      shareCodeArray: room.shareCode.split(''),
-    });
-    console.log('⏳ [waiting] shareCode=' + room.shareCode + ' roomId=' + room.roomId);
-    this._watchRoomStatus(room.roomId);
+
+    // 2. 获取用户信息
+    const userInfo = app.globalData.userInfo || { nickName: '拖车司机', avatarUrl: '' };
+    app.globalData.userInfo = userInfo;
+
+    // 3. 调用云函数创建房间
+    console.log('⏳ [waiting] ⏳ 正在创建房间...');
+    wx.showLoading({ title: '创建房间...' });
+    try {
+      const result = await roomService.createRoom(userInfo);
+      wx.hideLoading();
+
+      console.log('⏳ [waiting] ✅ 房间创建成功 shareCode=' + result.shareCode + ' roomId=' + result.roomId);
+
+      this.roomId = result.roomId;
+      this.setData({
+        shareCode: result.shareCode,
+        shareCodeArray: result.shareCode.split(''),
+      });
+
+      // 4. 开始监听房间状态（等待对方加入）
+      this._watchRoomStatus(result.roomId);
+    } catch (err) {
+      wx.hideLoading();
+      console.error('⏳ [waiting] ❌ 创建房间失败', err.message || err);
+      wx.showToast({ title: '创建失败，请重试', icon: 'none' });
+      setTimeout(() => wx.redirectTo({ url: '/pages/index/index' }), 1500);
+    }
   },
 
   onUnload() {
@@ -41,6 +69,9 @@ Page({
   // ====== 事件 ======
 
   onBack() {
+    // 返回首页视为放弃，清理房间状态
+    this._closeWatcher();
+    app.clearRoom();
     wx.navigateBack();
   },
 
