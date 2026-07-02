@@ -37,37 +37,7 @@
     </view>
   </view>
 
-  <!-- 共享码弹窗 (创建后显示) -->
-  <view class="modal-overlay" wx:if="{{showShareCode}}">
-    <view class="modal-box">
-      <view class="modal-header">
-        <text class="modal-title">共享房间已创建</text>
-        <text class="modal-subtitle">将下方共享码发送给对方</text>
-      </view>
-
-      <view class="share-code-display">
-        <view class="code-digits">
-          <text class="code-digit" wx:for="{{shareCodeArray}}" wx:key="*this">{{item}}</text>
-        </view>
-        <button class="btn-copy" bindtap="onCopyCode">复制共享码</button>
-      </view>
-
-    
-
-      <!-- 等待状态 -->
-      <view class="waiting-status">
-        <view class="loading-dots">
-          <view class="dot"></view>
-          <view class="dot"></view>
-          <view class="dot"></view>
-        </view>
-        <text class="waiting-text">等待对方加入...</text>
-      </view>
-
-      <!-- 取消按钮 -->
-      <button class="btn-cancel" bindtap="onCancelRoom">取消共享</button>
-    </view>
-  </view>
+  <!-- 创建房间后跳转到独立等待页 (pages/waiting/waiting) -->
 
   <!-- Toast -->
   <view class="toast-overlay" wx:if="{{toast.show}}">

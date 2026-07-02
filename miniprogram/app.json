@@ -2,7 +2,8 @@
   "pages": [
     "pages/index/index",
     "pages/map/map",
-    "pages/join/join"
+    "pages/join/join",
+    "pages/waiting/waiting"
   ],
   "window": {
     "navigationBarBackgroundColor": "#000000",

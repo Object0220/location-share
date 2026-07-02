@@ -1,0 +1,230 @@
+/** 等待页样式 - 独立全屏页面 */
+.page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 背景装饰 */
+.bg-decoration {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.bg-circle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.15;
+}
+
+.bg-circle-1 {
+  width: 300px;
+  height: 300px;
+  background: #07c160;
+  top: -80px;
+  right: -80px;
+}
+
+.bg-circle-2 {
+  width: 200px;
+  height: 200px;
+  background: #07c160;
+  bottom: 60px;
+  left: -60px;
+}
+
+/* 返回按钮 */
+.back-btn {
+  position: absolute;
+  top: 60px;
+  left: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+}
+
+.back-arrow {
+  font-size: 28px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1;
+}
+
+.back-text {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 主内容 */
+.main-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  max-width: 360px;
+  z-index: 1;
+  padding: 60px 0;
+}
+
+/* 标题 */
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.header-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.header-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.header-subtitle {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.6);
+  display: block;
+  line-height: 1.5;
+}
+
+/* 共享码卡片 */
+.code-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 32px 40px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+  margin-bottom: 28px;
+}
+
+.code-digits {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.code-digit {
+  width: 52px;
+  height: 62px;
+  background: linear-gradient(135deg, #f0f4ff, #e8ecf4);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 800;
+  color: #1a1a2e;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* 操作按钮 */
+.actions {
+  width: 100%;
+  margin-bottom: 32px;
+}
+
+.btn-copy {
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  border-radius: 14px;
+  padding: 14px 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  line-height: 1.5;
+  width: 100%;
+}
+
+.btn-copy:active {
+  transform: scale(0.97);
+}
+
+.btn-icon {
+  font-size: 18px;
+}
+
+/* 等待状态 */
+.waiting-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  background: #07c160;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite;
+}
+
+.dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.waiting-text {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* 取消按钮 */
+.btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  padding: 14px 0;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.5;
+  width: 100%;
+}
+
+.btn-cancel:active {
+  background: rgba(255, 255, 255, 0.15);
+}
