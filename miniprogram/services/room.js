@@ -155,7 +155,7 @@ module.exports = {
    * @param {function} onLocationUpdate - 客户位置更新回调
    * @returns {function} unwatch 函数
    */
-  watchPartnerLocation(roomId, myUserId, onLocationUpdate) {
+  watchPartnerLocation(roomId, myUserId, onLocationUpdate, onStatus) {
     const db = wx.cloud.database();
     const watcher = db.collection('locations')
       .where({
@@ -164,6 +164,7 @@ module.exports = {
       })
       .watch({
         onChange: (snapshot) => {
+          if (onStatus) onStatus({ connected: true });
           if (snapshot.type === 'init') {
             // 初始数据
             if (snapshot.docChanges && snapshot.docChanges.length > 0) {
@@ -181,6 +182,7 @@ module.exports = {
         },
         onError: (err) => {
           console.error('位置订阅失败', err);
+          if (onStatus) onStatus({ connected: false, error: err });
         },
       });
 

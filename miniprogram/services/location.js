@@ -9,9 +9,10 @@ function getAppInstance() {
   return getApp();
 }
 
-// 上报频率 (ms)
-const INTERVAL_FOREGROUND = 10000;   // 前台 10 秒
-const INTERVAL_BACKGROUND = 15000;    // 后台 15 秒
+// 上报频率 (ms) — 从环境配置读取
+const CONFIG = require('../env-config');
+const INTERVAL_FOREGROUND = CONFIG.LOCATION.FOREGROUND_INTERVAL || 10000;   // 前台
+const INTERVAL_BACKGROUND = CONFIG.LOCATION.BACKGROUND_INTERVAL || 15000;    // 后台
 
 let updateTimer = null;
 let backgroundMode = false;
@@ -20,8 +21,10 @@ let lastLocation = null;
 let locationCallback = null;
 // 取消令牌：stopUpdating 时设为 false，阻止重试回调继续执行
 let _active = false;
-// 上报节流
-const MIN_REPORT_INTERVAL = 10000; // 10 秒
+// onLocationChange 防重复注册
+let _watchingStarted = false;
+// 上报节流 — 轮询间隔的一半，至少 2 秒
+const MIN_REPORT_INTERVAL = Math.max(2000, Math.floor(INTERVAL_FOREGROUND / 2));
 let _lastReportTime = 0;           // 上次成功上报的时间戳
 
 module.exports = {
@@ -148,6 +151,7 @@ module.exports = {
   stopUpdating() {
     console.log('📍 [location] 🛑 停止位置上报');
     _active = false;
+    _watchingStarted = false;
     if (updateTimer) {
       clearTimeout(updateTimer);
       updateTimer = null;
@@ -231,7 +235,7 @@ module.exports = {
             speed: res.speed || 0,
             accuracy,
             altitude: res.altitude || 0,
-            heading: 0,
+            heading: res.heading || 0, // wx.getLocation 可能返回 heading
             timestamp: Date.now(),
           });
         },
@@ -250,10 +254,15 @@ module.exports = {
    * 启动 wx.onLocationChange 监听
    */
   _startWatching(roomId, userId) {
+    if (_watchingStarted) {
+      console.log('📍 [location] ⏭ watching 已在运行，跳过重复注册');
+      return;
+    }
     const that = this;
     try {
       wx.startLocationUpdate({
         success() {
+          _watchingStarted = true;
           wx.onLocationChange(function (res) {
             if (!_active) return;
             const loc = that._normalizeLocation(res);

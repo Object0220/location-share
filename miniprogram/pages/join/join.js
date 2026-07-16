@@ -119,8 +119,8 @@ Page({
     wx.getClipboardData({
       success(res) {
         const text = (res.data || '').trim();
-        // 只提取数字，限制 4 位
-        const digits = text.replace(/\D/g, '').slice(0, 4);
+        // 只提取数字 — 共享码是手机号最后4位
+        const digits = text.replace(/\D/g, '').slice(-4);
         if (digits.length === 4) {
           that._updateSlots(digits);
           that.setData({ codeValue: digits, errorMsg: '' });

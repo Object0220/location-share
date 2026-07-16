@@ -47,11 +47,16 @@ Page({
   _staleCheckTimer: null,
   _updateUiTimer: null,
   _locationWatchTimer: null,
+  _pollingGuard: false,
   _unwatchLocation: null,
   _roomStatusWatcher: null,
   _roomStatusPollTimer: null,
   _lastPartnerTimestamp: 0,
   _lastPartnerTick: 0,
+  _watchPartnerRetryCount: 0,
+  _watchPartnerRetryTimer: null,
+  _watchRoomRetryCount: 0,
+  _watchRoomRetryTimer: null,
   _partnerRawData: null,
   _cachedMyLocation: null,
   _cachedPartnerLocation: null,
@@ -59,9 +64,14 @@ Page({
   _prevStale: false,
   _userInteracted: false,
 
-  onLoad() {
+  async onLoad() {
     console.log('🗺️ [map] onLoad roomId=' + (app.globalData.currentRoom ? app.globalData.currentRoom.roomId.slice(0, 20) : '无'));
     this._resetState();
+    const valid = await this._validateRoom();
+    if (!valid) {
+      console.warn('🗺️ [map] 🛑 房间校验未通过，停止加载');
+      return;
+    }
     this._initRoom();
     this._requestPermissions();
   },
@@ -95,6 +105,7 @@ Page({
     this._stopStaleCheck();
     this._stopUiTimer();
     this._stopPolling();
+    this._clearRetryTimers();
     this._resetState();
   },
 
@@ -235,17 +246,30 @@ Page({
   },
 
   _startWatchingPartner() {
+    this._watchPartnerRetryCount = 0;
     this._unwatchLocation = roomService.watchPartnerLocation(
       this.roomId, this.userId,
-      (data) => { this._onPartnerLocationUpdate(data); }
+      (data) => {
+        this.setData({ wsConnected: true });
+        this._onPartnerLocationUpdate(data);
+      },
+      (status) => {
+        if (status.connected) {
+          this.setData({ wsConnected: true });
+          this._watchPartnerRetryCount = 0;
+        } else {
+          this.setData({ wsConnected: false });
+          this._scheduleWatchPartnerRetry();
+        }
+      }
     );
     this._startPollingPartner();
   },
 
   _startPollingPartner() {
+    if (this._pollingGuard) return;
+    this._pollingGuard = true;
     const POLL_INTERVAL = 5000;
-    // 如果已经停止了，不再轮询
-    if (this._locationWatchTimer === false) return;
     const poll = () => {
       this._locationWatchTimer = setTimeout(async () => {
         try {
@@ -267,6 +291,7 @@ Page({
   },
 
   _stopPolling() {
+    this._pollingGuard = false;
     if (this._locationWatchTimer) {
       clearTimeout(this._locationWatchTimer);
       this._locationWatchTimer = null;
@@ -291,13 +316,19 @@ Page({
   /** 监听房间状态，ended 时自动返回首页 */
   _watchRoomStatus() {
     if (!this.roomId) return;
+    this._watchRoomRetryCount = 0;
     // 尝试 watch（如果实时推送可用）
     const db = wx.cloud.database();
     this._roomStatusWatcher = db.collection('rooms').doc(this.roomId).watch({
       onChange: (snapshot) => {
+        this._watchRoomRetryCount = 0;
         this._onRoomStatusChange(snapshot);
       },
-      onError: (err) => console.error('🗺️ [map] ❌ watch 房间状态失败', err),
+      onError: (err) => {
+        console.error('🗺️ [map] ❌ watch 房间状态失败', err);
+        this._roomStatusWatcher = null;
+        this._scheduleWatchRoomRetry();
+      },
     });
     // 轮询备用（watch 不可用时生效）
     this._startPollingRoomStatus();
@@ -444,7 +475,9 @@ Page({
     if (this.data.markers.length < 1) return;
     const label = this.data.partnerStale ? '暂未更新' : (this.data.partnerInfo.nickName || '客户');
     const content = this.data.partnerLastUpdate ? label + ' · ' + this.data.partnerLastUpdate : label;
-    this.setData({ 'markers[1].callout.content': content });
+    const partnerIdx = this.data.markers.findIndex(m => m.id === 'partner');
+    if (partnerIdx < 0) return;
+    this.setData({ [`markers[${partnerIdx}].callout.content`]: content });
   },
 
   _updatePolyline() {
@@ -507,6 +540,84 @@ Page({
       clearInterval(this._staleCheckTimer);
       this._staleCheckTimer = null;
     }
+  },
+
+  // ====== 房间校验 ======
+
+  /**
+   * 校验房间是否有效（防止加载已结束的房间）
+   * @returns {Promise<boolean>}
+   */
+  async _validateRoom() {
+    try {
+      const room = app.globalData.currentRoom;
+      if (!room || !room.roomId) {
+        wx.showToast({ title: '配对信息丢失', icon: 'none' });
+        setTimeout(() => wx.redirectTo({ url: '/pages/index/index' }), 1500);
+        return false;
+      }
+      const result = await roomService.getRoomInfo(room.roomId);
+      if (result.code !== 0 || !result.roomData) {
+        console.warn('🗺️ [map] ❌ 房间不存在或无权访问');
+        app.clearRoom();
+        wx.showToast({ title: '救援已结束', icon: 'none' });
+        setTimeout(() => wx.redirectTo({ url: '/pages/index/index' }), 1500);
+        return false;
+      }
+      if (result.roomData.status === 'ended') {
+        console.warn('🗺️ [map] 🔚 房间已结束');
+        app.clearRoom();
+        wx.showToast({ title: '救援已结束', icon: 'none' });
+        setTimeout(() => wx.redirectTo({ url: '/pages/index/index' }), 1500);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn('🗺️ [map] ⚠️ 房间校验失败（放行）', err);
+      return true; // 校验失败时放行，避免网络波动卡住
+    }
+  },
+
+  // ====== 重试逻辑 ======
+
+  /** 伙伴位置 watch 重试（指数退避，上限 30s） */
+  _scheduleWatchPartnerRetry() {
+    this._watchPartnerRetryCount = (this._watchPartnerRetryCount || 0) + 1;
+    const delay = Math.min(1000 * Math.pow(2, this._watchPartnerRetryCount - 1), 30000);
+    console.log('🗺️ [map] ⏳ 伙伴位置 watch ' + delay + 'ms 后重试 (第' + this._watchPartnerRetryCount + '次)');
+    this._watchPartnerRetryTimer = setTimeout(() => {
+      this._watchPartnerRetryTimer = null;
+      if (!this._unwatchLocation && this.roomId) {
+        this._startWatchingPartner();
+      }
+    }, delay);
+  },
+
+  /** 房间状态 watch 重试（指数退避，上限 30s） */
+  _scheduleWatchRoomRetry() {
+    this._watchRoomRetryCount = (this._watchRoomRetryCount || 0) + 1;
+    const delay = Math.min(1000 * Math.pow(2, this._watchRoomRetryCount - 1), 30000);
+    console.log('🗺️ [map] ⏳ 房间状态 watch ' + delay + 'ms 后重试 (第' + this._watchRoomRetryCount + '次)');
+    this._watchRoomRetryTimer = setTimeout(() => {
+      this._watchRoomRetryTimer = null;
+      if (!this._roomStatusWatcher && this.roomId) {
+        this._watchRoomStatus();
+      }
+    }, delay);
+  },
+
+  /** 清理所有重制定时器 */
+  _clearRetryTimers() {
+    if (this._watchPartnerRetryTimer) {
+      clearTimeout(this._watchPartnerRetryTimer);
+      this._watchPartnerRetryTimer = null;
+    }
+    if (this._watchRoomRetryTimer) {
+      clearTimeout(this._watchRoomRetryTimer);
+      this._watchRoomRetryTimer = null;
+    }
+    this._watchPartnerRetryCount = 0;
+    this._watchRoomRetryCount = 0;
   },
 
   _showLocationError(msg) {
