@@ -8,9 +8,11 @@ const db = cloud.database();
 const _ = db.command;
 
 exports.main = async (event, context) => {
-  const { roomId, userId } = event;
+  const { roomId } = event;
+  const wxContext = cloud.getWXContext();
+  const openid = wxContext.OPENID;
 
-  console.log('🚪 [leaveRoom] 开始 roomId=' + roomId + ' userId=' + userId);
+  console.log('🚪 [leaveRoom] 开始 roomId=' + roomId + ' userId=' + openid);
 
   if (!roomId) {
     console.warn('🚪 [leaveRoom] ❌ 参数不完整');
@@ -25,6 +27,19 @@ exports.main = async (event, context) => {
     if (!room) {
       console.warn('🚪 [leaveRoom] ❌ 房间不存在 roomId=' + roomId);
       return { code: -1, message: '房间不存在' };
+    }
+
+    // 鉴权：只有房间成员才能结束共享
+    const isMember = room.userA.userId === openid || (room.userB && room.userB.userId === openid);
+    if (!isMember) {
+      console.warn('🚪 [leaveRoom] ❌ 非房间成员试图结束共享 openid=' + openid);
+      return { code: -1, message: '您不是该房间的成员' };
+    }
+
+    // 如果已经是 ended，幂等处理
+    if (room.status === 'ended') {
+      console.log('🚪 [leaveRoom] ⚠️ 房间已结束，直接返回成功');
+      return { code: 0, message: '房间已结束' };
     }
 
     console.log('🚪 [leaveRoom] 房间当前状态=' + room.status);

@@ -58,7 +58,7 @@ module.exports = {
         status: 'waiting',
         partnerInfo: null,
       });
-      console.log('🏠 [createRoom] ✅ 创建成功，已保存到本地');
+      console.log('🏠 [createRoom] ✅ 创建成功 roomId=' + result.roomId + ' shareCode=' + result.shareCode);
       return result;
     });
   },
@@ -116,16 +116,20 @@ module.exports = {
    * @param {string} roomId
    * @returns {Promise<{roomData, partnerLocation}>}
    */
-  getRoomInfo(roomId) {
+  async getRoomInfo(roomId) {
     console.log('📡 [getRoomInfo] 🚀 调用云函数 roomId=' + roomId);
-    return wx.cloud.callFunction({
-      name: 'getRoomInfo',
-      data: { roomId },
-    }).then(res => {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'getRoomInfo',
+        data: { roomId },
+      });
       const r = res.result;
-      console.log('📡 [getRoomInfo] 📥 返回 code=' + r.code + ' 状态=' + (r.roomData ? r.roomData.status : '无') + ' 对方位置=' + (r.partnerLocation ? '有' : '无'));
-      return r;
-    });
+      console.log('📡 [getRoomInfo] 📥 返回 code=' + (r ? r.code : '无') + ' msg=' + (r ? r.message : '无') + ' 状态=' + (r && r.roomData ? r.roomData.status : '无') + ' 对方位置=' + (r && r.partnerLocation ? '有' : '无'));
+      return r || { code: -2, message: '云函数返回空' };
+    } catch (err) {
+      console.error('📡 [getRoomInfo] ❌ 云函数调用失败', err);
+      return { code: -2, message: '云函数调用失败: ' + (err.message || 'timeout') };
+    }
   },
 
   /**

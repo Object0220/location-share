@@ -1,0 +1,110 @@
+<!-- 司机地图页 -->
+<view class="page">
+  <map
+    id="map"
+    class="map"
+    latitude="{{myLocation.latitude || 39.9042}}"
+    longitude="{{myLocation.longitude || 116.4074}}"
+    scale="{{mapScale}}"
+    markers="{{markers}}"
+    polyline="{{polyline}}"
+    show-location="{{true}}"
+    enable-satellite="{{satelliteMode}}"
+    style="width: 100%; height: 100vh;"
+    bindmarkertap="onMarkerTap"
+    bindscalechange="onScaleChange"
+    bindregionchange="onRegionChange">
+  </map>
+
+  <!-- 等待客户 → 顶部信息卡 -->
+  <view class="info-bar" wx:if="{{waitingForPartner}}">
+    <view class="waiting-bar">
+      <view class="waiting-dots">
+        <view class="dot"></view>
+        <view class="dot"></view>
+        <view class="dot"></view>
+      </view>
+      <view class="waiting-text">
+        <text class="waiting-title">等待客户加入</text>
+        <text class="waiting-hint">将共享码发给客户</text>
+      </view>
+      <view class="share-code-tag" bindtap="onCopyCode">
+        <text class="share-code-text">{{shareCode}}</text>
+        <text class="share-code-hint">点击复制</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 位置共享中 → 顶部信息栏 -->
+  <view class="info-bar" wx:else>
+    <view class="info-bar-left">
+      <image class="partner-avatar" src="{{partnerInfo.avatarUrl || '/images/ic_js.svg'}}" mode="aspectFill" />
+      <view class="partner-detail">
+        <text class="partner-name">{{partnerInfo.nickName || '客户'}}</text>
+        <view class="partner-status">
+          <view class="status-dot {{partnerOnline ? 'online' : 'offline'}}"></view>
+          <text class="status-text">{{partnerOnline ? '在线' : '离线'}}</text>
+          <text class="update-time" wx:if="{{partnerLastUpdate}}">· {{partnerLastUpdate}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="info-bar-right">
+      <text class="distance-text" wx:if="{{distance !== null}}">{{distance}}</text>
+    </view>
+  </view>
+
+  <view class="status-overlay" wx:if="{{!wsConnected }}">
+    <view class="status-overlay-content">
+      <view class="loading-dots"><view class="dot"></view><view class="dot"></view><view class="dot"></view></view>
+      <text class="status-overlay-text">连接中断，正在重连…</text>
+    </view>
+  </view>
+
+  <view class="location-error" wx:if="{{locationError}}">
+    <text class="location-error-icon">⚠️</text>
+    <text class="location-error-text">{{locationError}}</text>
+    <button class="location-retry-btn" bindtap="onRetryLocation">重试</button>
+  </view>
+
+  <view class="stale-notice" wx:if="{{partnerStale}}">
+    <text>⏳ 客户位置暂未更新</text>
+  </view>
+
+  <view class="modal-overlay" wx:if="{{showPartnerDetail}}" bindtap="onCloseDetail">
+    <view class="modal-sheet" catchtap="">
+      <view class="sheet-handle"></view>
+      <view class="sheet-header">
+        <image class="sheet-avatar" src="{{partnerInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
+        <view class="sheet-meta">
+          <text class="sheet-name">{{partnerInfo.nickName || '客户'}}</text>
+          <view class="sheet-online">
+            <view class="online-dot {{partnerOnline ? '' : 'off'}}"></view>
+            <text>{{partnerOnline ? '在线' : '离线'}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="sheet-stats">
+        <view class="stat-item">
+          <text class="stat-value">{{distance || '--'}}</text>
+          <text class="stat-label">距离</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-value">{{partnerSpeed || '0'}}<text class="stat-unit">m/s</text></text>
+          <text class="stat-label">速度</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-value">{{partnerHeading || '0'}}°</text>
+          <text class="stat-label">方向</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-value">{{partnerLastUpdate || '--'}}</text>
+          <text class="stat-label">更新</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="bottom-controls safe-area-bottom">
+    <button class="btn-end-share" bindtap="onEndShare">结束共享</button>
+  </view>
+</view>

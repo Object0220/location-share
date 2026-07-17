@@ -16,6 +16,7 @@ const INTERVAL_BACKGROUND = CONFIG.LOCATION.BACKGROUND_INTERVAL || 15000;    // 
 
 let updateTimer = null;
 let backgroundMode = false;
+let _backgroundStarted = false;  // startLocationUpdateBackground 防重复
 let isForeground = true;
 let lastLocation = null;
 let locationCallback = null;
@@ -53,54 +54,79 @@ module.exports = {
    */
   requestPermission() {
     return new Promise((resolve) => {
-      wx.authorize({
-        scope: 'scope.userLocation',
-        success() {
-          resolve(true);
-        },
-        fail() {
-          // 引导用户去设置页手动开启
-          wx.showModal({
-            title: '需要位置权限',
-            content: '请开启位置权限以使用位置共享功能',
-            success: (res) => {
-              if (res.confirm) {
-                wx.openSetting({
-                  success(settingRes) {
-                    resolve(!!settingRes.authSetting['scope.userLocation']);
-                  },
-                });
-              } else {
-                resolve(false);
-              }
+      // 先查当前状态，已授权直接返回，不重复弹窗
+      wx.getSetting({
+        success(res) {
+          if (res.authSetting['scope.userLocation']) {
+            resolve(true);
+            return;
+          }
+          // 未授权 → 尝试 wx.authorize
+          wx.authorize({
+            scope: 'scope.userLocation',
+            success() {
+              resolve(true);
+            },
+            fail() {
+              // 引导用户去设置页手动开启
+              wx.showModal({
+                title: '需要位置权限',
+                content: '请开启位置权限以使用位置共享功能',
+                success: (modalRes) => {
+                  if (modalRes.confirm) {
+                    wx.openSetting({
+                      success(settingRes) {
+                        resolve(!!settingRes.authSetting['scope.userLocation']);
+                      },
+                    });
+                  } else {
+                    resolve(false);
+                  }
+                },
+              });
             },
           });
+        },
+        fail() {
+          // getSetting 失败，兜底走授权
+          resolve(false);
         },
       });
     });
   },
 
   /**
-   * 请求后台定位权限
+   * 请求后台定位权限（改用 wx.getSetting + wx.openSetting 方式）
+   * wx.authorize 对 scope.userLocationBackground 静默失败
    * @returns {Promise<boolean>}
    */
   requestBackgroundPermission() {
     return new Promise((resolve) => {
-      wx.authorize({
-        scope: 'scope.userLocationBackground',
-        success() {
-          resolve(true);
-        },
-        fail() {
+      // 先查当前状态
+      wx.getSetting({
+        success(res) {
+          if (res.authSetting['scope.userLocationBackground']) {
+            resolve(true);
+            return;
+          }
+          // 未授权 → 弹窗引导去设置页
           wx.showModal({
             title: '需要后台定位权限',
             content: '开启后台定位，退出小程序后仍可共享位置',
             confirmText: '去设置',
-            success: (res) => {
-              if (res.confirm) {
+            success: (modalRes) => {
+              if (modalRes.confirm) {
                 wx.openSetting({
                   success(settingRes) {
-                    resolve(!!settingRes.authSetting['scope.userLocationBackground']);
+                    const granted = !!settingRes.authSetting['scope.userLocationBackground'];
+                    if (!granted) {
+                      console.warn('📍 [location] 后台定位权限未开启');
+                    }
+                    resolve(granted);
+                  },
+                  fail(err) {
+                    console.warn('📍 [location] openSetting 失败', err);
+                    resolve(false);
                   },
                 });
               } else {
@@ -108,6 +134,10 @@ module.exports = {
               }
             },
           });
+        },
+        fail(err) {
+          console.warn('📍 [location] getSetting 失败', err);
+          resolve(false);
         },
       });
     });
@@ -152,13 +182,16 @@ module.exports = {
     console.log('📍 [location] 🛑 停止位置上报');
     _active = false;
     _watchingStarted = false;
+    _backgroundStarted = false;
     if (updateTimer) {
       clearTimeout(updateTimer);
       updateTimer = null;
     }
     try {
-      wx.stopLocationUpdate({ fail: () => {} });
-    } catch (e) {}
+      wx.stopLocationUpdate({ fail: (err) => console.warn('📍 [location] stopLocationUpdate 失败', err) });
+    } catch (e) {
+      console.warn('📍 [location] stopLocationUpdate 异常', e);
+    }
     backgroundMode = false;
     locationCallback = null;
     lastLocation = null;
@@ -194,10 +227,26 @@ module.exports = {
    * 需配合 app.json 的 requiredBackgroundModes: ["location"]
    */
   startBackgroundUpdate(roomId, userId) {
+    if (_backgroundStarted) {
+      console.log('📍 [location] ⏭ 后台定位已启动，跳过重复注册');
+      return;
+    }
+    _backgroundStarted = true;
+
+    // 开发者工具不支持后台定位，直接降级
+    try {
+      const sysInfo = wx.getSystemInfoSync();
+      if (sysInfo.platform === 'devtools') {
+        console.log('📍 [location] ⏭ 开发者工具，跳过后台定位，使用轮询');
+        this._startPeriodicReport(roomId, userId);
+        return;
+      }
+    } catch (_) {}
+
     const that = this;
     wx.startLocationUpdateBackground({
       success() {
-        console.log('后台定位已启动');
+        console.log('📍 [location] 后台定位已启动');
         backgroundMode = true;
         wx.onLocationChange(function (res) {
           const loc = that._normalizeLocation(res);
@@ -207,45 +256,56 @@ module.exports = {
         });
       },
       fail(err) {
-        console.warn('启动后台定位失败', err);
+        console.warn('📍 [location] 启动后台定位失败', err);
         that._startPeriodicReport(roomId, userId);
       },
     });
   },
 
   /**
-   * 获取当前位置（单次，高精度）
+   * 获取当前位置（单次，高精度），失败重试 2 次
    * @returns {Promise<object|null>}
    */
-  getCurrentPosition() {
-    return new Promise((resolve) => {
-      if (!_active) { resolve(null); return; }
-      console.log('📍 [location] 开始定位...');
-      wx.getLocation({
-        type: 'gcj02',
-        isHighAccuracy: true,
-        highAccuracyExpireTime: 10000,
-        success: (res) => {
-          if (!_active) return;
-          const accuracy = res.accuracy || 0;
-          console.log('📍 [location] 定位成功 lat=' + res.latitude.toFixed(5) + ' lng=' + res.longitude.toFixed(5) + ' acc=' + accuracy.toFixed(0) + 'm');
-          resolve({
-            latitude: res.latitude,
-            longitude: res.longitude,
-            speed: res.speed || 0,
-            accuracy,
-            altitude: res.altitude || 0,
-            heading: res.heading || 0, // wx.getLocation 可能返回 heading
-            timestamp: Date.now(),
+  async getCurrentPosition(retries = 2) {
+    if (!_active) return null;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      if (!_active) return null;
+      if (attempt > 0) {
+        console.log('📍 [location] ⏳ 定位重试第 ' + attempt + '/' + retries + ' 次');
+        await new Promise(r => setTimeout(r, 1000));
+        if (!_active) return null;
+      }
+      try {
+        const res = await new Promise((resolve, reject) => {
+          wx.getLocation({
+            type: 'gcj02',
+            isHighAccuracy: true,
+            highAccuracyExpireTime: 10000,
+            success: resolve,
+            fail: reject,
           });
-        },
-        fail: (err) => {
-          if (!_active) return;
-          console.warn('📍 [location] ❌ getLocation 失败', err.errMsg || err);
-          resolve(null);
-        },
-      });
-    });
+        });
+        if (!_active) return null;
+        const accuracy = res.accuracy || 0;
+        console.log('📍 [location] 定位成功 lat=' + res.latitude.toFixed(5) + ' lng=' + res.longitude.toFixed(5) + ' acc=' + accuracy.toFixed(0) + 'm');
+        return {
+          latitude: res.latitude,
+          longitude: res.longitude,
+          speed: res.speed || 0,
+          accuracy,
+          altitude: res.altitude || 0,
+          heading: res.heading || 0,
+          timestamp: Date.now(),
+        };
+      } catch (err) {
+        if (attempt < retries) {
+          console.warn('📍 [location] ⚠️ 定位失败，即将重试', err.errMsg || err);
+        } else {
+          console.warn('📍 [location] ❌ 定位失败（已重试' + retries + '次）', err.errMsg || err);
+        }
+      }
+    }
+    return null;
   },
 
   // ====== 内部方法 ======

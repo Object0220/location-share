@@ -1,7 +1,8 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/map/map",
+    "pages/driver-map/driver-map",
+    "pages/customer-map/customer-map",
     "pages/join/join",
     "pages/waiting/waiting"
   ],

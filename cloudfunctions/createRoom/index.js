@@ -33,6 +33,34 @@ exports.main = async (event, context) => {
 
     if (existing.data.length > 0) {
       const room = existing.data[0];
+
+      // 如果房间已有配对方（上一轮残留），清空重置为等待状态
+      if (room.userB && room.userB.userId) {
+        console.log('🏠 [createRoom] 🧹 发现残留配对方 userB=' + room.userB.userId + '，重置房间');
+        await db.collection('rooms').doc(room._id).update({
+          data: {
+            userB: {},
+            status: 'waiting',
+            shareCode,
+            updateTime: db.serverDate(),
+          },
+        });
+        // 同时清理该房间的旧位置数据，避免干扰
+        try {
+          await db.collection('locations').where({ roomId: room._id }).remove();
+        } catch (e) {
+          console.warn('🏠 [createRoom] 清理旧位置数据失败', e);
+        }
+        console.log('🏠 [createRoom] ♻️ 复用已有房间（已重置） roomId=' + room._id + ' shareCode=' + shareCode);
+        return {
+          code: 0,
+          roomId: room._id,
+          shareCode,
+          qrcodeUrl: '',
+        };
+      }
+
+      // 没有残留配对方，直接复用
       console.log('🏠 [createRoom] ♻️ 复用已有房间 roomId=' + room._id + ' shareCode=' + room.shareCode);
       return {
         code: 0,
@@ -42,44 +70,59 @@ exports.main = async (event, context) => {
       };
     }
 
-    // 检查共享码是否已被占用
-    console.log('🏠 [createRoom] 检查共享码占用 shareCode=' + shareCode);
-    const codeExists = await db.collection('rooms')
-      .where({ shareCode, status: 'waiting' })
-      .get();
+    // 检查共享码是否已被占用（最多重试 10 次避免死循环）
+    let finalShareCode = shareCode;
+    let maxRetries = 10;
+    while (maxRetries-- > 0) {
+      console.log('🏠 [createRoom] 检查共享码占用 shareCode=' + finalShareCode);
+      const codeExists = await db.collection('rooms')
+        .where({ shareCode: finalShareCode, status: 'waiting' })
+        .get();
 
-    if (codeExists.data.length > 0) {
+      if (codeExists.data.length === 0) break;
+
       console.log('🏠 [createRoom] 🔁 共享码冲突，重新生成');
-      return exports.main({
-        ...event,
-        shareCode: generateShareCode(),
-      });
+      finalShareCode = generateShareCode();
+    }
+
+    if (maxRetries < 0) {
+      console.error('🏠 [createRoom] ❌ 共享码重试耗尽');
+      return { code: -2, message: '共享码生成失败，请重试' };
     }
 
     // 创建房间
-    console.log('🏠 [createRoom] 📝 写入数据库 roomId=' + roomId);
-    const result = await db.collection('rooms').add({
-      data: {
-        _id: roomId,
-        roomId,
-        shareCode,
-        userA: {
-          userId: openid,
-          nickName: userA.nickName || '拖车司机',
-          avatarUrl: userA.avatarUrl || '',
-        },
-        userB: {},
-        status: 'waiting',
-        createTime: db.serverDate(),
-        updateTime: db.serverDate(),
+    const roomData = {
+      _id: roomId,
+      roomId,
+      shareCode: finalShareCode,
+      userA: {
+        userId: openid,
+        nickName: userA.nickName || '拖车司机',
+        avatarUrl: userA.avatarUrl || '',
       },
-    });
+      userB: {},
+      status: 'waiting',
+      createTime: db.serverDate(),
+      updateTime: db.serverDate(),
+    };
+    console.log('🏠 [createRoom] 📝 写入数据库', JSON.stringify({
+      roomId, shareCode: finalShareCode,
+      userA_id: openid, userA_name: userA.nickName || '拖车司机',
+      status: 'waiting',
+    }));
+    const result = await db.collection('rooms').add({ data: roomData });
 
-    console.log('🏠 [createRoom] ✅ 创建成功 roomId=' + result._id + ' shareCode=' + shareCode);
+    console.log('🏠 [createRoom] ✅ 创建成功', JSON.stringify({
+      _id: result._id,
+      shareCode: finalShareCode,
+      status: 'waiting',
+      userA_id: openid,
+      userA_name: userA.nickName || '拖车司机',
+    }));
     return {
       code: 0,
       roomId: result._id,
-      shareCode,
+      shareCode: finalShareCode,
       qrcodeUrl: '',
     };
   } catch (err) {

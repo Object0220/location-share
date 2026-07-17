@@ -193,7 +193,7 @@ Page({
       setTimeout(() => {
         console.log('🔗 [加入页] 🔄 跳转到地图页');
         wx.redirectTo({
-          url: '/pages/map/map',
+          url: '/pages/customer-map/customer-map',
         });
       }, 1000);
     } catch (err) {

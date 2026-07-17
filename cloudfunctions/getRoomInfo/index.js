@@ -48,7 +48,7 @@ exports.main = async (event, context) => {
 
     // 获取对方最新位置（文档 ID = roomId_userId，一对一覆盖写入）
     let partnerLocation = null;
-    if (partnerInfo) {
+    if (partnerInfo && partnerInfo.userId) {
       const partnerDocId = roomId + '_' + partnerInfo.userId;
       const locRes = await db.collection('locations').doc(partnerDocId).get();
 
@@ -58,6 +58,8 @@ exports.main = async (event, context) => {
       } else {
         console.log('📡 [getRoomInfo] 对方暂无位置数据');
       }
+    } else {
+      console.log('📡 [getRoomInfo] 对方尚未加入，跳过查位置');
     }
 
     // 获取自己的最新位置
@@ -85,6 +87,6 @@ exports.main = async (event, context) => {
     };
   } catch (err) {
     console.error('📡 [getRoomInfo] ❌ 获取失败', err);
-    return { code: -1, message: '获取失败' };
+    return { code: -1, message: '获取失败: ' + (err.message || JSON.stringify(err)) };
   }
 };

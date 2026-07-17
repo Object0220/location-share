@@ -20,9 +20,6 @@ Page({
   },
 
   roomId: '',
-  _roomWatcher: null,
-  _watchRetryTimer: null,
-  _watchRetryCount: 0,
 
   onLoad() {
     console.log('⏳ [waiting] onLoad — 输入手机号后4位');
@@ -30,7 +27,6 @@ Page({
 
   onUnload() {
     console.log('⏳ [waiting] onUnload');
-    this._closeWatcher();
   },
 
   // ====== 手机号输入事件 ======
@@ -67,14 +63,7 @@ Page({
   // ====== 事件 ======
 
   onBack() {
-    if (this.data.showPhoneInput) {
-      wx.navigateBack();
-    } else {
-      // 等待模式返回视为放弃
-      this._closeWatcher();
-      app.clearRoom();
-      wx.navigateBack();
-    }
+    wx.navigateBack();
   },
 
   /** 开始创建救援房间 */
@@ -118,8 +107,10 @@ Page({
         shareCodeArray: result.shareCode.split(''),
       });
 
-      // 4. 开始监听房间状态
-      this._watchRoomStatus(result.roomId);
+      // 4. 直接跳转到地图页等待客户加入
+      console.log('⏳ [waiting] 🗺️ 跳转到地图页');
+      await new Promise(r => setTimeout(r, 500));
+      wx.redirectTo({ url: '/pages/driver-map/driver-map' });
     } catch (err) {
       wx.hideLoading();
       console.error('⏳ [waiting] ❌ 创建房间失败', err.message || err);
@@ -154,7 +145,6 @@ Page({
   /** 执行取消 */
   async _doCancelRoom() {
     try {
-      this._closeWatcher();
       const room = app.globalData.currentRoom;
       if (room && room.roomId) {
         await roomService.leaveRoom(room.roomId);
@@ -169,69 +159,4 @@ Page({
     }
   },
 
-  // ====== 监听房间状态 ======
-
-  _watchRoomStatus(roomId) {
-    if (!roomId) return;
-    console.log('⏳ [waiting] 📡 开始监听房间 roomId=' + roomId);
-    const db = wx.cloud.database();
-
-    this._roomWatcher = db.collection('rooms').doc(roomId).watch({
-      onChange: (snapshot) => {
-        this._watchRetryCount = 0;
-        const room = snapshot.docs && snapshot.docs[0];
-        if (!room) return;
-
-        console.log('⏳ [waiting] 📡 watch 更新: 状态=' + room.status + ' userB=' + (room.userB ? room.userB.nickName : 'null'));
-
-        if (room.status === 'active' && room.userB) {
-          console.log('⏳ [waiting] 🎉 客户已加入! nickName=' + room.userB.nickName);
-          this._closeWatcher();
-          app.saveRoom({
-            roomId: room._id, shareCode: room.shareCode,
-            role: 'A', status: 'active', partnerInfo: room.userB,
-          });
-          wx.showToast({ title: '客户已加入', icon: 'success' });
-          setTimeout(() => wx.redirectTo({ url: '/pages/map/map' }), 1000);
-        }
-
-        if (room.status === 'ended') {
-          console.log('⏳ [waiting] 🔚 救援已结束');
-          this._closeWatcher();
-          app.clearRoom();
-          wx.showToast({ title: '救援已结束', icon: 'none' });
-          setTimeout(() => wx.redirectTo({ url: '/pages/index/index' }), 1500);
-        }
-      },
-      onError: (err) => {
-        console.error('⏳ [waiting] ❌ watch 失败', err);
-        this._roomWatcher = null;
-        this._scheduleWatchRetry(roomId);
-      },
-    });
-  },
-
-  _scheduleWatchRetry(roomId) {
-    this._watchRetryCount = (this._watchRetryCount || 0) + 1;
-    const delay = Math.min(1000 * Math.pow(2, this._watchRetryCount - 1), 30000);
-    console.log('⏳ [waiting] ⏳ ' + delay + 'ms 后重试 (第' + this._watchRetryCount + '次)');
-    this._watchRetryTimer = setTimeout(() => {
-      this._watchRetryTimer = null;
-      if (!this._roomWatcher && roomId) {
-        this._watchRoomStatus(roomId);
-      }
-    }, delay);
-  },
-
-  _closeWatcher() {
-    if (this._watchRetryTimer) {
-      clearTimeout(this._watchRetryTimer);
-      this._watchRetryTimer = null;
-    }
-    this._watchRetryCount = 0;
-    if (this._roomWatcher) {
-      this._roomWatcher.close();
-      this._roomWatcher = null;
-    }
-  },
 });
