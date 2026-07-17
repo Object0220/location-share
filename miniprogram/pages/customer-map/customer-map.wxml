@@ -56,11 +56,6 @@
     </view>
   </view>
 
-  <view class="status-overlay" wx:if="{{!wsConnected }}">
-    <view class="status-overlay-content">
-      <view class="loading-dots"><view class="dot"></view><view class="dot"></view><view class="dot"></view></view>
-      <text class="status-overlay-text">连接中断，正在重连…</text>
-    </view>
   </view>
 
   <view class="location-error" wx:if="{{locationError}}">
