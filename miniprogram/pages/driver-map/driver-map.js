@@ -88,7 +88,7 @@ Page({
         if (!res.confirm) return;
         try {
           wx.showLoading({ title: '结束救援...' });
-          await roomService.leaveRoom(this.roomId);
+          await roomService.leaveRoom(this.roomId, 'driver');
           wx.hideLoading();
           const pages = getCurrentPages();
           wx.navigateBack({ delta: Math.max(1, Math.min(pages.length, 2)) });

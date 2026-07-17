@@ -118,23 +118,25 @@ Page({
     }
   },
 
+  /** 客户退出房间（房间保留，下次可重新加入） */
   onEndShare() {
     wx.showModal({
-      title: '结束救援',
-      content: '确定要结束救援吗？',
-      confirmColor: '#fa5151',
+      title: '退出救援',
+      content: '退出后仍可通过共享码重新加入房间。',
+      confirmColor: '#f5a623',
+      cancelText: '取消',
+      confirmText: '退出房间',
       success: async (res) => {
         if (!res.confirm) return;
         try {
-          wx.showLoading({ title: '结束救援...' });
-          await roomService.leaveRoom(this.roomId);
+          wx.showLoading({ title: '退出救援...' });
+          await roomService.leaveRoom(this.roomId, 'customer');
           wx.hideLoading();
           const pages = getCurrentPages();
           wx.navigateBack({ delta: Math.max(1, Math.min(pages.length, 2)) });
         } catch (err) {
           wx.hideLoading();
-          console.error(DBG + '结束失败', err);
-          app.clearRoom();
+          console.error(DBG + '退出失败', err);
           const pages = getCurrentPages();
           wx.navigateBack({ delta: Math.max(1, Math.min(pages.length, 2)) });
         }

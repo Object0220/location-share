@@ -137,17 +137,19 @@ module.exports = {
    * @param {string} roomId
    * @returns {Promise}
    */
-  leaveRoom(roomId) {
+  leaveRoom(roomId, role) {
     const app = getAppInstance();
     const openid = app.globalData.openid;
-    console.log('🚪 [leaveRoom] 🚀 调用云函数 roomId=' + roomId + ' userId=' + (openid ? openid.slice(0, 10) : '无'));
+    console.log('🚪 [leaveRoom] 🚀 调用云函数 roomId=' + roomId + ' role=' + (role || 'driver') + ' userId=' + (openid ? openid.slice(0, 10) : '无'));
     return wx.cloud.callFunction({
       name: 'leaveRoom',
-      data: { roomId, userId: openid },
+      data: { roomId, userId: openid, role },
     }).then(res => {
       console.log('🚪 [leaveRoom] 📥 返回: ' + JSON.stringify(res.result));
-      app.clearRoom();
-      console.log('🚪 [leaveRoom] ✅ 已清理本地房间状态');
+      if (role !== 'customer') {
+        app.clearRoom();
+        console.log('🚪 [leaveRoom] ✅ 已清理本地房间状态');
+      }
       return res.result;
     });
   },

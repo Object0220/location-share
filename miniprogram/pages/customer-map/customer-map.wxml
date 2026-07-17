@@ -107,6 +107,6 @@
   </view>
 
   <view class="bottom-controls safe-area-bottom">
-    <button class="btn-end-share" bindtap="onEndShare">结束共享</button>
+    <button class="btn-end-share" bindtap="onEndShare">退出房间</button>
   </view>
 </view>
