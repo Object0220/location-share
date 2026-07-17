@@ -42,6 +42,7 @@
       <view class="addr-text">
         <text class="addr-name">{{destination.name}}</text>
         <text class="addr-detail">{{destination.address}}</text>
+        <text class="addr-coord">经度 {{destination.longitude}}  纬度 {{destination.latitude}}</text>
       </view>
       <text class="addr-edit">修改</text>
     </view>

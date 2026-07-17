@@ -91,6 +91,13 @@
   text-overflow: ellipsis;
 }
 
+.addr-coord {
+  font-size: 10px;
+  color: #bbb;
+  display: block;
+  margin-top: 1px;
+}
+
 .addr-edit {
   font-size: 12px;
   color: var(--primary);
