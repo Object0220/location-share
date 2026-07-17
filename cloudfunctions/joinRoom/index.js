@@ -35,13 +35,7 @@ exports.main = async (event, context) => {
     }
 
     const room = roomRes.data[0];
-    console.log('🔗 [joinRoom] 找到房间 roomId=' + room._id + ' creator=' + room.userA.userId);
-
-    // 检查是否是自己创建的房间
-    if (room.userA.userId === openid) {
-      console.warn('🔗 [joinRoom] ❌ 不能加入自己的房间');
-      return { code: -1, message: '不能加入自己创建的房间' };
-    }
+    console.log('🔗 [joinRoom] 找到房间 roomId=' + room._id + ' creator=' + room.userA.userId + ' caller=' + openid);
 
     // 检查是否已经在其他活跃房间中
     console.log('🔗 [joinRoom] 检查是否在其他活跃房间中');

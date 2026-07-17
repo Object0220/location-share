@@ -35,30 +35,15 @@ class MockQuery {
     this.query = query;
   }
 
+  /** 通用条件匹配：支持 $or + 普通条件的组合 */
   _match(doc) {
     const q = this.query;
-    if (q.$or) {
-      return q.$or.some(condition => {
-        return Object.entries(condition).every(([key, val]) => {
-          const keys = key.split('.');
-          let d = doc;
-          for (const k of keys) {
-            if (d === undefined || d === null) return false;
-            d = d[k];
-          }
-          return d === val;
-        });
-      });
-    }
-    return Object.entries(q).every(([key, val]) => {
+    if (!q || Object.keys(q).length === 0) return true;
+
+    const checkKey = (key, val) => {
+      if (key === '$or') return true;
       if (val && typeof val === 'object' && val._type === 'lt') {
-        const keys = key.split('.');
-        let d = doc;
-        for (const k of keys) {
-          if (d === undefined || d === null) return false;
-          d = d[k];
-        }
-        return d < val.value;
+        return doc[key] < val.value;
       }
       if (key === 'status' && val && val._type === 'in') {
         return val.value.includes(doc.status);
@@ -70,7 +55,16 @@ class MockQuery {
         d = d[k];
       }
       return d === val;
-    });
+    };
+
+    if (q.$or) {
+      const orOk = q.$or.some(c =>
+        Object.entries(c).every(([k, v]) => checkKey(k, v))
+      );
+      if (!orOk) return false;
+    }
+
+    return Object.entries(q).every(([k, v]) => checkKey(k, v));
   }
 
   async get() {
@@ -338,7 +332,7 @@ await test('joinRoom 通过共享码成功加入房间', async () => {
   assertEq(room.userB.nickName, '客户张三');
 });
 
-await test('joinRoom 不能加入自己的房间', async () => {
+await test('joinRoom 加入自己的房间（允许，方便同账号多设备测试）', async () => {
   mockCollectionData['rooms'] = [{
     _id: 'room_self', roomId: 'room_self', shareCode: '1111',
     userA: { userId: 'mock_openid_123', nickName: '我自己' },
@@ -346,9 +340,13 @@ await test('joinRoom 不能加入自己的房间', async () => {
     status: 'waiting',
   }];
   const fn = loadFunction('joinRoom');
-  const result = await fn({ shareCode: '1111', userB: {} });
-  assertEq(result.code, -1);
-  assertEq(result.message, '不能加入自己创建的房间');
+  const result = await fn({ shareCode: '1111', userB: { nickName: '我也', avatarUrl: '' } });
+  assertEq(result.code, 0, '同一账号也能加入');
+  assertEq(result.roomId, 'room_self');
+  const room = mockCollectionData['rooms'][0];
+  assertEq(room.status, 'active');
+  assertEq(room.userB.userId, 'mock_openid_123');
+  assertEq(room.userB.nickName, '我也');
 });
 
 await test('joinRoom 房间已被别人加入时条件更新失败', async () => {
