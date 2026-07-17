@@ -7,7 +7,7 @@ const CONFIG = {
 
   // 定位参数
   LOCATION: {
-    FOREGROUND_INTERVAL: 5000,    // 前台 5s — 地图实时更新需要
+    FOREGROUND_INTERVAL: 10000,   // 前台 10s
     BACKGROUND_INTERVAL: 15000,   // 后台 15s — 切后台降频省电
   },
 };
