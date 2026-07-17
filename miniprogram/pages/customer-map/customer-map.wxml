@@ -56,8 +56,6 @@
     </view>
   </view>
 
-  </view>
-
   <view class="location-error" wx:if="{{locationError}}">
     <text class="location-error-icon">⚠️</text>
     <text class="location-error-text">{{locationError}}</text>
