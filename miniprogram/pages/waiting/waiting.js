@@ -90,7 +90,19 @@ Page({
     const userInfo = app.globalData.userInfo || { nickName: '拖车司机', avatarUrl: '' };
     app.globalData.userInfo = userInfo;
 
-    // 3. 创建房间（用手机号后4位作为共享码）
+    // 3. 确认对话框
+    const confirmed = await new Promise((resolve) => {
+      wx.showModal({
+        title: '创建救援房间',
+        content: '手机号后四位：' + phoneLast4 + '\n客户输入此号码即可加入救援。',
+        confirmText: '确认创建',
+        cancelText: '取消',
+        success: (res) => resolve(res.confirm),
+      });
+    });
+    if (!confirmed) return;
+
+    // 4. 创建房间（用手机号后4位作为共享码）
     console.log('⏳ [waiting] ⏳ 正在创建房间...');
     wx.showLoading({ title: '创建房间...' });
     try {
@@ -126,37 +138,5 @@ Page({
     });
   },
 
-  /** 取消救援 */
-  onCancelRoom() {
-    const that = this;
-    wx.showModal({
-      title: '取消救援',
-      content: '确定要取消当前救援吗？',
-      success(res) {
-        if (!res.confirm) return;
-        that._doCancelRoom();
-      },
-      fail(err) {
-        console.error('⏳ [waiting] ❌ 弹窗失败', err);
-      },
-    });
-  },
-
-  /** 执行取消 */
-  async _doCancelRoom() {
-    try {
-      const room = app.globalData.currentRoom;
-      if (room && room.roomId) {
-        await roomService.leaveRoom(room.roomId);
-      } else {
-        app.clearRoom();
-      }
-      wx.navigateBack();
-    } catch (err) {
-      console.error('⏳ [waiting] ❌ 取消救援失败', err);
-      app.clearRoom();
-      wx.navigateBack();
-    }
-  },
 
 });

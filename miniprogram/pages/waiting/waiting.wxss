@@ -380,21 +380,4 @@
   font-weight: 400;
 }
 
-/* ---- 取消按钮 ---- */
-.btn-cancel {
-  width: 100%;
-  max-width: 320px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 14px 0;
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.4);
-  background: transparent;
-  line-height: 1.5;
-  transition: all 0.2s;
-}
 
-.btn-cancel:active {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.2);
-}

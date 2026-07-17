@@ -101,6 +101,5 @@
       <text class="waiting-text">等待客户加入...</text>
     </view>
 
-    <button class="btn-cancel" bindtap="onCancelRoom">取消救援</button>
   </block>
 </view>
