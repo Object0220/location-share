@@ -37,10 +37,16 @@ Page({
 
     const digits = [...this.data.phoneDigits];
     digits[this.data.phoneLength] = value;
+    const newLength = this.data.phoneLength + 1;
     this.setData({
       phoneDigits: digits,
-      phoneLength: this.data.phoneLength + 1,
+      phoneLength: newLength,
     });
+
+    // 输完4位自动弹确认框
+    if (newLength === 4) {
+      setTimeout(() => this.onStartCreate(), 300);
+    }
   },
 
   onPhoneDelete() {

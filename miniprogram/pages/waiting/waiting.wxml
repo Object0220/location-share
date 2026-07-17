@@ -63,9 +63,7 @@
       <text class="clear-btn" wx:if="{{phoneLength == 0}}" style="visibility:hidden">清空</text>
     </view>
 
-    <button class="btn-create {{phoneLength == 4 ? 'active' : ''}}" bindtap="onStartCreate" disabled="{{phoneLength < 4}}">
-      <text>创建救援房间</text>
-    </button>
+
   </block>
 
   <!-- ===== 第二阶段：等待客户加入 ===== -->
