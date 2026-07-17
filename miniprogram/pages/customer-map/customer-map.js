@@ -94,6 +94,19 @@ Page({
       },
       fail: (err) => {
         if (err.errMsg && err.errMsg.indexOf('cancel') > -1) return;
+        console.error(DBG + '❌ chooseLocation 失败', err);
+        // 开发者工具不支持 chooseLocation
+        try {
+          const sysInfo = wx.getSystemInfoSync();
+          if (sysInfo.platform === 'devtools') {
+            wx.showModal({
+              title: '提示',
+              content: '地址选择器仅在真机上可用，当前为开发者工具。',
+              showCancel: false,
+            });
+            return;
+          }
+        } catch (_) {}
         wx.showToast({ title: '选择地址失败', icon: 'none' });
       },
     });
