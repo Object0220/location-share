@@ -155,22 +155,6 @@ module.exports = {
   },
 
   /**
-   * 设置救援目的地
-   * @param {string} roomId
-   * @param {object} destination - { name, address, latitude, longitude }
-   */
-  setDestination(roomId, destination) {
-    console.log('📍 [setDestination] 🚀 roomId=' + roomId + ' name=' + (destination.name || ''));
-    return wx.cloud.callFunction({
-      name: 'setDestination',
-      data: { roomId, destination },
-    }).then(res => {
-      console.log('📍 [setDestination] 📥', JSON.stringify(res.result));
-      return res.result;
-    });
-  },
-
-  /**
    * 订阅客户位置变化（云开发实时数据推送）
    * @param {string} roomId
    * @param {string} myUserId - 自己的 userId

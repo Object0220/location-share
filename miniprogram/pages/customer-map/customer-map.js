@@ -12,7 +12,6 @@ Page({
   data: {
     ...shared.getDefaultData(),
     partnerInfo: { nickName: '拖车司机', avatarUrl: '' },
-    settingDest: false,
   },
   ...shared.getDefaultFields(),
 
@@ -77,79 +76,7 @@ Page({
 
   onBack() { wx.navigateBack(); },
 
-  // ====== 救援目的地 ======
-
-  /** 打开微信原生地址选择器 */
-  onSetDestination() {
-    // 确保定位权限已授权
-    wx.getSetting({
-      success: (setting) => {
-        if (!setting.authSetting['scope.userLocation']) {
-          wx.showModal({ title: '需要位置权限', content: '请在设置中开启位置权限以使用地址选择功能', showCancel: false });
-          return;
-        }
-        this._openLocationPicker();
-      },
-      fail: () => this._openLocationPicker(),
-    });
-  },
-
-  _openLocationPicker() {
-    wx.chooseLocation({
-      success: (res) => {
-        if (!res.latitude || !res.longitude) return;
-        console.log(DBG + '📍 选择了地址:', res.name, res.address);
-        this._saveDestination({
-          name: res.name || '',
-          address: res.address || '',
-          latitude: res.latitude,
-          longitude: res.longitude,
-        });
-      },
-      fail: (err) => {
-        if (err.errMsg && err.errMsg.indexOf('cancel') > -1) return;
-        console.error(DBG + '❌ chooseLocation 失败', err);
-        // 开发者工具不支持 chooseLocation
-        try {
-          const sysInfo = wx.getSystemInfoSync();
-          if (sysInfo.platform === 'devtools') {
-            wx.showModal({
-              title: '提示',
-              content: '地址选择器仅在真机上可用，当前为开发者工具。',
-              showCancel: false,
-            });
-            return;
-          }
-        } catch (_) {}
-        wx.showToast({ title: '选择地址失败', icon: 'none' });
-      },
-    });
-  },
-
-  /** 保存目的地到云端 */
-  async _saveDestination(dest) {
-    this.setData({ settingDest: true });
-    try {
-      const result = await roomService.setDestination(this.roomId, dest);
-      if (result.code === 0) {
-        this.setData({ destination: dest });
-        // 立即更新地图标记
-        this._updateDestinationMarker();
-        wx.showToast({ title: '目的地已设置', icon: 'success' });
-        console.log(DBG + '📍 目的地坐标:', dest.latitude, dest.longitude);
-      } else {
-        wx.showToast({ title: result.message || '设置失败', icon: 'none' });
-      }
-    } catch (err) {
-      console.error(DBG + '❌ 设置失败', err);
-      wx.showToast({ title: '设置失败', icon: 'none' });
-    } finally {
-      this.setData({ settingDest: false });
-    }
-  },
-
-  /** 客户退出房间（房间保留，下次可重新加入） */
-  onEndShare() {
+    onEndShare() {
     wx.showModal({
       title: '退出救援',
       content: '退出后仍可通过共享码重新加入房间。',
