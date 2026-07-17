@@ -562,6 +562,32 @@ module.exports = {
      * 更新连线（两点之间的绿色箭头线）
      * 双方都有位置时才显示
      */
+    /** 添加/更新目的地标记（客户设置后立即调用） */
+    page._updateDestinationMarker = function () {
+      const dest = this.data.destination;
+      if (!dest || !dest.latitude) return;
+      const markers = [...this.data.markers];
+      const idx = markers.findIndex(m => m.id === 'destination');
+      const marker = {
+        id: 'destination',
+        latitude: dest.latitude, longitude: dest.longitude,
+        iconPath: '/images/marker-dest.svg', width: 32, height: 32,
+        callout: {
+          content: dest.name || '目的地', display: 'ALWAYS',
+          fontSize: 12, borderRadius: 10, bgColor: '#f5a623',
+          padding: 6, textAlign: 'center', color: '#fff',
+        },
+        anchor: { x: 0.5, y: 0.5 },
+      };
+      if (idx >= 0) {
+        markers[idx] = { ...markers[idx], ...marker };
+      } else {
+        markers.push(marker);
+      }
+      this.setData({ markers });
+      this._markersInited = true;
+    };
+
     page._updatePolyline = function () {
       const myLoc = this._cachedMyLocation;
       const partnerLoc = this._cachedPartnerLocation;
