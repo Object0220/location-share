@@ -134,7 +134,7 @@ Page({
       if (result.code === 0) {
         this.setData({ destination: dest });
         // 立即更新地图标记
-        this._updateDestinationMarker();
+      //  this._updateDestinationMarker();
         wx.showToast({ title: '目的地已设置', icon: 'success' });
         console.log(DBG + '📍 目的地坐标:', dest.latitude, dest.longitude);
       } else {
