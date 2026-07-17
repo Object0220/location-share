@@ -18,7 +18,7 @@
       "desc": "你的位置信息将用于与救援车辆实时查看彼此位置"
     }
   },
-  "requiredPrivateInfos": ["getLocation", "onLocationChange", "startLocationUpdate", "startLocationUpdateBackground"],
+  "requiredPrivateInfos": ["getLocation", "onLocationChange", "startLocationUpdate", "startLocationUpdateBackground", "chooseLocation"],
   "sitemapLocation": "sitemap.json",
   "style": "v2",
   "useExtendedLib": {

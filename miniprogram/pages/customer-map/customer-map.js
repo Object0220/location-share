@@ -81,6 +81,20 @@ Page({
 
   /** 打开微信原生地址选择器 */
   onSetDestination() {
+    // 确保定位权限已授权
+    wx.getSetting({
+      success: (setting) => {
+        if (!setting.authSetting['scope.userLocation']) {
+          wx.showModal({ title: '需要位置权限', content: '请在设置中开启位置权限以使用地址选择功能', showCancel: false });
+          return;
+        }
+        this._openLocationPicker();
+      },
+      fail: () => this._openLocationPicker(),
+    });
+  },
+
+  _openLocationPicker() {
     wx.chooseLocation({
       success: (res) => {
         if (!res.latitude || !res.longitude) return;
