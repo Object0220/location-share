@@ -1,6 +1,5 @@
-<!-- 地图页 - 核心位置共享界面 -->
+<!-- 客户地图页 -->
 <view class="page">
-  <!-- 地图组件 -->
   <map
     id="map"
     class="map"
@@ -14,60 +13,72 @@
     style="width: 100%; height: 100vh;"
     bindmarkertap="onMarkerTap"
     bindscalechange="onScaleChange"
-    bindregionchange="onRegionChange"
-  >
+    bindregionchange="onRegionChange">
   </map>
 
-  <!-- 顶部信息栏 -->
-  <view class="info-bar">
-    <view class="info-bar-left">
-      <image class="partner-avatar" src="{{'/images/ic_js.svg'}}" mode="aspectFill" />
-      <view class="partner-detail">
-        <text class="partner-name">{{partnerInfo.nickName || '客户'}}</text>
-        <view class="partner-status">
-          <view class="status-dot {{partnerOnline ? 'online' : 'offline'}}"></view>
-          <text class="status-text">{{partnerOnline ? '在线' : '离线'}}</text>
-          <text class="update-time" wx:if="{{partnerLastUpdate}}">· {{partnerLastUpdate}}</text>
+  <!-- 信息卡：司机信息 + 救援地址 -->
+  <view class="info-card">
+    <view class="info-card-row">
+      <view class="info-card-left">
+        <image class="partner-avatar" src="{{'/images/ic_js.svg'}}" mode="aspectFill" />
+        <view class="partner-detail">
+          <text class="partner-name">{{partnerInfo.nickName || '司机'}}</text>
+          <view class="partner-status">
+            <view class="status-dot {{partnerOnline ? 'online' : 'offline'}}"></view>
+            <text class="status-text">{{partnerOnline ? '在线' : '离线'}}</text>
+            <text class="update-time" wx:if="{{partnerLastUpdate}}">· {{partnerLastUpdate}}</text>
+          </view>
         </view>
       </view>
+      <view class="info-card-right">
+        <text class="distance-text" wx:if="{{distance !== null}}">{{distance}}</text>
+      </view>
     </view>
-    <view class="info-bar-right">
-      <text class="distance-text" wx:if="{{distance !== null}}">{{distance}}</text>
+
+    <!-- 分割线 + 救援地址行 -->
+    <view class="info-card-divider"></view>
+    <view class="info-card-addr" wx:if="{{destination}}" bindtap="onSetDestination">
+      <text class="addr-icon">🚩</text>
+      <view class="addr-text">
+        <text class="addr-name">{{destination.name}}</text>
+        <text class="addr-detail">{{destination.address}}</text>
+      </view>
+      <text class="addr-edit">修改</text>
+    </view>
+    <view class="info-card-addr" wx:else bindtap="onSetDestination">
+      <text class="addr-icon">📍</text>
+      <view class="addr-text">
+        <text class="addr-name">设置救援地址</text>
+        <text class="addr-detail">让司机知道去哪里救援</text>
+      </view>
+      <text class="addr-arrow">→</text>
     </view>
   </view>
 
-    <!-- 网络状态提示 -->
   <view class="status-overlay" wx:if="{{!wsConnected }}">
     <view class="status-overlay-content">
-      <view class="loading-dots">
-        <view class="dot"></view>
-        <view class="dot"></view>
-        <view class="dot"></view>
-      </view>
+      <view class="loading-dots"><view class="dot"></view><view class="dot"></view><view class="dot"></view></view>
       <text class="status-overlay-text">连接中断，正在重连…</text>
     </view>
   </view>
 
-  <!-- 定位失败提示 -->
   <view class="location-error" wx:if="{{locationError}}">
     <text class="location-error-icon">⚠️</text>
     <text class="location-error-text">{{locationError}}</text>
     <button class="location-retry-btn" bindtap="onRetryLocation">重试</button>
   </view>
 
-  <!-- 客户位置很久未更新提示 -->
   <view class="stale-notice" wx:if="{{partnerStale}}">
-    <text>⏳ 客户位置暂未更新</text>
+    <text>⏳ 司机位置暂未更新</text>
   </view>
 
-  <!-- 对方详情弹窗 -->
   <view class="modal-overlay" wx:if="{{showPartnerDetail}}" bindtap="onCloseDetail">
     <view class="modal-sheet" catchtap="">
       <view class="sheet-handle"></view>
       <view class="sheet-header">
         <image class="sheet-avatar" src="{{partnerInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
         <view class="sheet-meta">
-          <text class="sheet-name">{{partnerInfo.nickName || '客户'}}</text>
+          <text class="sheet-name">{{partnerInfo.nickName || '司机'}}</text>
           <view class="sheet-online">
             <view class="online-dot {{partnerOnline ? '' : 'off'}}"></view>
             <text>{{partnerOnline ? '在线' : '离线'}}</text>
@@ -95,13 +106,7 @@
     </view>
   </view>
 
-
-
-  <!-- 底部控制栏 -->
   <view class="bottom-controls safe-area-bottom">
-    <!-- 结束共享按钮 -->
-    <button class="btn-end-share" bindtap="onEndShare">
-      结束共享
-    </button>
+    <button class="btn-end-share" bindtap="onEndShare">结束共享</button>
   </view>
 </view>

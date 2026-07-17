@@ -35,21 +35,33 @@
     </view>
   </view>
 
-  <!-- 位置共享中 → 顶部信息栏 -->
-  <view class="info-bar" wx:else>
-    <view class="info-bar-left">
-      <image class="partner-avatar" src="{{partnerInfo.avatarUrl || '/images/ic_js.svg'}}" mode="aspectFill" />
-      <view class="partner-detail">
-        <text class="partner-name">{{partnerInfo.nickName || '客户'}}</text>
-        <view class="partner-status">
-          <view class="status-dot {{partnerOnline ? 'online' : 'offline'}}"></view>
-          <text class="status-text">{{partnerOnline ? '在线' : '离线'}}</text>
-          <text class="update-time" wx:if="{{partnerLastUpdate}}">· {{partnerLastUpdate}}</text>
+  <!-- 位置共享中 → 信息卡（客户信息 + 救援地址） -->
+  <view class="info-card" wx:else>
+    <view class="info-card-row">
+      <view class="info-card-left">
+        <image class="partner-avatar" src="{{partnerInfo.avatarUrl || '/images/ic_js.svg'}}" mode="aspectFill" />
+        <view class="partner-detail">
+          <text class="partner-name">{{partnerInfo.nickName || '客户'}}</text>
+          <view class="partner-status">
+            <view class="status-dot {{partnerOnline ? 'online' : 'offline'}}"></view>
+            <text class="status-text">{{partnerOnline ? '在线' : '离线'}}</text>
+            <text class="update-time" wx:if="{{partnerLastUpdate}}">· {{partnerLastUpdate}}</text>
+          </view>
         </view>
       </view>
+      <view class="info-card-right">
+        <text class="distance-text" wx:if="{{distance !== null}}">{{distance}}</text>
+      </view>
     </view>
-    <view class="info-bar-right">
-      <text class="distance-text" wx:if="{{distance !== null}}">{{distance}}</text>
+    <!-- 救援地址行 -->
+    <view class="info-card-divider" wx:if="{{destination}}"></view>
+    <view class="info-card-addr" wx:if="{{destination}}">
+      <text class="addr-icon">🚩</text>
+      <view class="addr-text">
+        <text class="addr-name">{{destination.name}}</text>
+        <text class="addr-detail">{{destination.address}}</text>
+      </view>
+      <text class="addr-dist" wx:if="{{destDistance}}">{{destDistance}}</text>
     </view>
   </view>
 

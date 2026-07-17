@@ -438,3 +438,80 @@
   font-size: 9px;
   color: rgba(255, 255, 255, 0.75);
 }
+
+/* 信息卡片 */
+.info-card {
+  position: absolute;
+  top: 200rpx;
+  left: 16px;
+  right: 16px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.12);
+}
+
+.info-card-row {
+  display: flex;
+  align-items: center;
+}
+
+.info-card-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.info-card-right {
+  flex-shrink: 0;
+  padding-left: 12px;
+}
+
+.info-card-divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 10px -2px 8px;
+}
+
+.info-card-addr {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.addr-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.addr-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.addr-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  display: block;
+}
+
+.addr-detail {
+  font-size: 11px;
+  color: #999;
+  display: block;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.addr-dist {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f5a623;
+  flex-shrink: 0;
+}

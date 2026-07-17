@@ -55,6 +55,8 @@ module.exports = {
       partnerStale: false,
       showPartnerDetail: false,
       isFirstLoad: true,
+      destination: null,          // 救援目的地 { name, address, latitude, longitude }
+      destDistance: null,         // 我到目的地的距离
     };
   },
 
@@ -296,7 +298,15 @@ module.exports = {
           if (snapshot.type === 'init') return;
           this._watchRoomRetryCount = 0;
           const room = snapshot.docs && snapshot.docs[0];
-          if (room && room.status === 'ended') {
+          if (!room) return;
+          // 检测目的地更新
+          if (room.destination && room.destination.latitude) {
+            this.setData({ destination: room.destination });
+            this._initMapMarkers();
+            this._calcDestDistance();
+          }
+          // 检测共享结束
+          if (room.status === 'ended') {
             console.log(prefix + ' 🔚 对方已结束救援');
             this._onRoomEnded();
           }
@@ -509,6 +519,22 @@ module.exports = {
           anchor: { x: 0.5, y: 0.5 },
         });
       }
+      // 目的地标记
+      const dest = this.data.destination;
+      if (dest && dest.latitude) {
+        markers.push({
+          id: 'destination',
+          latitude: dest.latitude, longitude: dest.longitude,
+          iconPath: '/images/marker-dest.svg',
+          width: 32, height: 32,
+          callout: {
+            content: dest.name || '目的地',
+            display: 'ALWAYS', fontSize: 12, borderRadius: 10,
+            bgColor: '#f5a623', padding: 6, textAlign: 'center', color: '#fff',
+          },
+          anchor: { x: 0.5, y: 0.5 },
+        });
+      }
       this.setData({ markers });
       if (partnerLoc && partnerLoc.latitude) this._markersInited = true;
       this._updatePolyline();
@@ -624,6 +650,15 @@ module.exports = {
         clearInterval(this._staleCheckTimer);
         this._staleCheckTimer = null;
       }
+    };
+
+    /** 计算我到目的地的距离 */
+    page._calcDestDistance = function () {
+      const dest = this.data.destination;
+      const myLoc = this._cachedMyLocation;
+      if (!dest || !myLoc || !myLoc.latitude) { return; }
+      const d = util.calcDistance(myLoc.latitude, myLoc.longitude, dest.latitude, dest.longitude);
+      this.setData({ destDistance: util.formatDistance(d) });
     };
 
     // ----- 通用清理 -----

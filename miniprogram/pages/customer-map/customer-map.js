@@ -12,6 +12,7 @@ Page({
   data: {
     ...shared.getDefaultData(),
     partnerInfo: { nickName: '拖车司机', avatarUrl: '' },
+    settingDest: false,
   },
   ...shared.getDefaultFields(),
 
@@ -75,6 +76,47 @@ Page({
   },
 
   onBack() { wx.navigateBack(); },
+
+  // ====== 救援目的地 ======
+
+  /** 打开微信原生地址选择器 */
+  onSetDestination() {
+    wx.chooseLocation({
+      success: (res) => {
+        if (!res.latitude || !res.longitude) return;
+        console.log(DBG + '📍 选择了地址:', res.name, res.address);
+        this._saveDestination({
+          name: res.name || '',
+          address: res.address || '',
+          latitude: res.latitude,
+          longitude: res.longitude,
+        });
+      },
+      fail: (err) => {
+        if (err.errMsg && err.errMsg.indexOf('cancel') > -1) return;
+        wx.showToast({ title: '选择地址失败', icon: 'none' });
+      },
+    });
+  },
+
+  /** 保存目的地到云端 */
+  async _saveDestination(dest) {
+    this.setData({ settingDest: true });
+    try {
+      const result = await roomService.setDestination(this.roomId, dest);
+      if (result.code === 0) {
+        this.setData({ destination: dest });
+        wx.showToast({ title: '目的地已设置', icon: 'success' });
+      } else {
+        wx.showToast({ title: result.message || '设置失败', icon: 'none' });
+      }
+    } catch (err) {
+      console.error(DBG + '❌ 设置失败', err);
+      wx.showToast({ title: '设置失败', icon: 'none' });
+    } finally {
+      this.setData({ settingDest: false });
+    }
+  },
 
   onEndShare() {
     wx.showModal({
