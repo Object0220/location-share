@@ -83,6 +83,7 @@ module.exports = {
       _markersInited: false,           // 标记是否已初始化
       _prevStale: false,               // 上一次掉线状态（检测变化用）
       _userInteracted: false,          // 用户是否拖拽过地图
+      _ended: false,                   // 共享是否已结束（防 _onRoomEnded 重入）
     };
   },
 
@@ -138,6 +139,16 @@ module.exports = {
 
     // ----- 权限 & 定位服务 -----
 
+    /** 日志前缀：🚗 司机 / 👤 客户 */
+    page._logPrefix = function () {
+      return this._shareRole === 'driver' ? '🚗' : '👤';
+    };
+
+    /** 对方标记的显示文字：司机端看对方是"客户"，客户端看对方是"司机" */
+    page._partnerLabel = function () {
+      return this._shareRole === 'driver' ? '客户' : '司机';
+    };
+
     /**
      * 请求定位权限 + 启动所有服务
      * 这是整个位置共享的入口点
@@ -153,6 +164,7 @@ module.exports = {
      * @param {string} role - 'driver' | 'customer'（仅用于日志前缀）
      */
     page._requestPermissions = async function (role) {
+      this._shareRole = role; // 供各回调日志区分司机🚗/客户👤
       const granted = await locationService.requestPermission();
       if (!granted) {
         this._showLocationError('定位权限被拒绝，请在设置中开启');
@@ -170,7 +182,7 @@ module.exports = {
 
       this._startLocationServices();
       this._startWatchingPartner();
-      this._watchRoomEnded(role);
+      this._watchRoomEnded();
 
       // 延迟启动后台定位，避免与 startLocationUpdate 撞 -13000 频率限制
       this._backgroundTimer = setTimeout(() => {
@@ -194,10 +206,11 @@ module.exports = {
 
     /**
      * 监听对方位置变化（watch 实时推送，唯一通道）
-     * 断线后由 _scheduleWatchPartnerRetry 指数退避自动重连
+     * 断线后由 _scheduleRetry 指数退避自动重连
      */
     page._startWatchingPartner = function () {
       this._watchPartnerRetryCount = 0;
+      const prefix = this._logPrefix();
       this._unwatchLocation = roomService.watchPartnerLocation(
         this.roomId, this.userId,
         // onChange：位置更新
@@ -208,27 +221,36 @@ module.exports = {
         // onStatus：连接状态变更
         (status) => {
           if (status.connected) {
+            console.log(prefix + ' 📡 对方位置 watch 已连接');
             this.setData({ wsConnected: true });
             this._watchPartnerRetryCount = 0;
           } else {
+            console.warn(prefix + ' ⚠️ 对方位置 watch 断开，进入重连' + (status.error ? ': ' + (status.error.errMsg || status.error.message || status.error) : ''));
+            this._unwatchLocation = null;  // 清空引用，重连守卫才能通过
             this.setData({ wsConnected: false });
-            this._scheduleWatchPartnerRetry();
+            this._scheduleRetry('Partner', () => {
+              if (!this._unwatchLocation) this._startWatchingPartner();
+            });
           }
         }
       );
     };
 
     /**
-     * 位置 watch 重试（指数退避）
+     * watch 重试（指数退避，位置/房间两处共用）
      * 1s → 2s → 4s → ... → 30s 封顶
-     * 仅当 _unwatchLocation 为 null（watch 已断开）时才重试
+     *
+     * @param {string} key - 'Partner' | 'Room'，决定读写哪组计数字段
+     * @param {Function} restart - 重试动作（内部自行判断是否可重连）
      */
-    page._scheduleWatchPartnerRetry = function () {
-      this._watchPartnerRetryCount = (this._watchPartnerRetryCount || 0) + 1;
-      const delay = Math.min(1000 * Math.pow(2, this._watchPartnerRetryCount - 1), 30000);
-      this._watchPartnerRetryTimer = setTimeout(() => {
-        this._watchPartnerRetryTimer = null;
-        if (!this._unwatchLocation && this.roomId) this._startWatchingPartner();
+    page._scheduleRetry = function (key, restart) {
+      const countKey = '_watch' + key + 'RetryCount';
+      const timerKey = '_watch' + key + 'RetryTimer';
+      this[countKey] = (this[countKey] || 0) + 1;
+      const delay = Math.min(1000 * Math.pow(2, this[countKey] - 1), 30000);
+      this[timerKey] = setTimeout(() => {
+        this[timerKey] = null;
+        if (this.roomId) restart.call(this);
       }, delay);
     };
 
@@ -237,11 +259,9 @@ module.exports = {
     /**
      * 监听房间 ended 状态（watch 实时推送，唯一通道）
      * 当对方结束救援时，自动返回首页
-     * 断线后由 _scheduleWatchRoomRetry 指数退避自动重连
-     *
-     * @param {string} role - 'driver' | 'customer'
+     * 断线后由 _scheduleRetry 指数退避自动重连
      */
-    page._watchRoomEnded = function (role) {
+    page._watchRoomEnded = function () {
       if (!this.roomId) return;
       // 关闭旧 watcher 防止泄漏
       if (this._roomStatusWatcher) {
@@ -250,7 +270,7 @@ module.exports = {
       }
       this._watchRoomRetryCount = 0;
       const db = wx.cloud.database();
-      const prefix = role === 'driver' ? '🚗' : '👤';
+      const prefix = this._logPrefix();
       this._roomStatusWatcher = db.collection('rooms').doc(this.roomId).watch({
         onChange: (snapshot) => {
           // 跳过 type=init（初始快照），只处理真实变更
@@ -258,10 +278,13 @@ module.exports = {
           this._watchRoomRetryCount = 0;
           const room = snapshot.docs && snapshot.docs[0];
           if (!room) return;
+          console.log(prefix + ' 🏠 房间变更: status=' + room.status + ' destination=' + (room.destination && room.destination.name ? room.destination.name : '无'));
           // 检测目的地更新
           if (room.destination && room.destination.latitude) {
             this.setData({ destination: room.destination });
-            this._initMapMarkers();
+            // markers 已初始化 → 单独 upsert 目的地标记；否则走 _refreshMarkers 重建
+            if (this._markersInited) this._upsertDestMarker();
+            else this._refreshMarkers();
             this._calcDestDistance();
           }
           // 检测共享结束
@@ -273,22 +296,24 @@ module.exports = {
         onError: (err) => {
           console.error(prefix + ' ❌ watch 房间失败', err);
           this._roomStatusWatcher = null;
-          this._scheduleWatchRoomRetry();
+          this._scheduleRetry('Room', () => {
+            if (!this._roomStatusWatcher) this._watchRoomEnded();
+          });
         },
       });
     };
 
     /**
-     * 房间 watch 重试（指数退避）
-     * 规则同位置 watch 重试
+     * 统一清理：关监听、停定位与定时器、重置状态
+     * _onRoomEnded 与 _handleUnload 共用
      */
-    page._scheduleWatchRoomRetry = function () {
-      this._watchRoomRetryCount = (this._watchRoomRetryCount || 0) + 1;
-      const delay = Math.min(1000 * Math.pow(2, this._watchRoomRetryCount - 1), 30000);
-      this._watchRoomRetryTimer = setTimeout(() => {
-        this._watchRoomRetryTimer = null;
-        if (!this._roomStatusWatcher && this.roomId) this._watchRoomEnded();
-      }, delay);
+    page._cleanup = function () {
+      this._unwatch();
+      locationService.stopUpdating();
+      this._stopStaleCheck();
+      this._stopUiTimer();
+      this._clearRetryTimers();
+      this._resetState();
     };
 
     /**
@@ -301,13 +326,10 @@ module.exports = {
      *   不自动关闭界面，由用户点击"返回首页"离开
      */
     page._onRoomEnded = function () {
+      if (this._ended) return;   // 防重入：watch 异步回调可能重复触发 ended
+      this._ended = true;
       console.log('🔚 共享已结束');
-      this._unwatch();
-      locationService.stopUpdating();
-      this._stopStaleCheck();
-      this._stopUiTimer();
-      this._clearRetryTimers();
-      this._resetState();
+      this._cleanup();
       getApp().clearRoom();
 
       // 司机主动结束：不关闭页面，展示结束态
@@ -363,12 +385,8 @@ module.exports = {
 
       if (Object.keys(updateData).length > 0) this.setData(updateData);
 
-      if (this._markersInited) {
-        this._updateMarkerPositions();
-        this._updatePolyline();
-      } else {
-        this._initMapMarkers();
-      }
+      this._refreshMarkers();
+      this._updatePolyline();
     };
 
     /**
@@ -384,6 +402,9 @@ module.exports = {
       const now = Date.now();
       if (now - this._lastPartnerTick < C.PARTNER_UPDATE_THROTTLE) return;
       this._lastPartnerTick = now;
+      const prefix = this._logPrefix();
+      console.log(prefix + ' 📍 收到对方位置: ' + data.latitude.toFixed(6) + ',' + data.longitude.toFixed(6) +
+        ' 速度=' + (data.speed || 0).toFixed(1) + 'm/s 方向=' + (data.heading || 0) + '°');
 
       this._lastPartnerTimestamp = data._timestamp || now;
       this._partnerRawData = data;
@@ -407,49 +428,52 @@ module.exports = {
       }
 
       // 更新地图标记
-      if (!this._markersInited || this.data.markers.length < 1) {
-        this._initMapMarkers();
-      } else {
-        this._updateMarkerPositions();
-        this._updatePolyline();
-      }
+      this._refreshMarkers();
+      this._updatePolyline();
+
       this._startStaleCheck();
     };
 
     // ----- 标记管理 -----
 
     /**
-     * 初始化地图标记
-     * 只在首次获取到双方位置时执行一次
-     * 用 _markersInited 防止重复初始化
+     * 刷新地图标记（自动决定"建"还是"改"）
      *
-     * 标记布局：
-     * - partner（绿色）：对方位置，名称+更新时间
-     * - 自己的位置通过 map 组件的 show-location 显示蓝点
+     * - markers 里已有 'partner' → 单字段更新其坐标（高频路径，避免整表 setData）
+     * - 没有 → 整表重建（首次、客户退出再进入、markers 丢失等场景）
+     *
+     * 整表重建时同步补上 destination 标记；polyline 由调用方负责
      */
-    page._initMapMarkers = function () {
-      if (this._markersInited) return;
-      const myLoc = this._cachedMyLocation || this.data.myLocation;
+    page._refreshMarkers = function () {
       const partnerLoc = this._cachedPartnerLocation;
-      if (!myLoc || !myLoc.latitude) return;
+      if (!partnerLoc || !partnerLoc.latitude) return;
 
-      const markers = [];
-      if (partnerLoc && partnerLoc.latitude) {
-        markers.push({
-          id: 'partner',
-          latitude: partnerLoc.latitude, longitude: partnerLoc.longitude,
-          iconPath: this.data.partnerInfo.avatarUrl || '/images/marker-partner.svg',
-          width: 28, height: 28,
-          callout: {
-            content: this.data.partnerInfo.nickName || '',
-            display: 'ALWAYS', fontSize: 12, borderRadius: 10,
-            bgColor: '#07c160', padding: 6, textAlign: 'center', color: '#fff',
-          },
-          rotate: partnerLoc.heading || 0,
-          anchor: { x: 0.5, y: 0.5 },
+      // 高频路径：partner 标记已存在 → 单字段更新
+      const idx = this.data.markers.findIndex(m => m.id === 'partner');
+      if (idx >= 0) {
+        this.setData({
+          [`markers[${idx}].latitude`]: partnerLoc.latitude,
+          [`markers[${idx}].longitude`]: partnerLoc.longitude,
+          [`markers[${idx}].rotate`]: partnerLoc.heading || 0,
         });
+        return;
       }
-      // 目的地标记
+
+      // 重建路径：partner 不存在（首次 / 退出再进入 / 丢失）
+      const markers = [{
+        id: 'partner',
+        latitude: partnerLoc.latitude, longitude: partnerLoc.longitude,
+        iconPath: '/images/marker-partner.svg',
+        width: 28, height: 28,
+        callout: {
+          content: this._partnerLabel(),
+          display: 'ALWAYS', fontSize: 12, borderRadius: 10,
+          bgColor: '#07c160', padding: 6, textAlign: 'center', color: '#fff',
+        },
+        rotate: partnerLoc.heading || 0,
+        anchor: { x: 0.5, y: 0.5 },
+      }];
+      // 目的地标记（如有）
       const dest = this.data.destination;
       if (dest && dest.latitude) {
         markers.push({
@@ -466,34 +490,14 @@ module.exports = {
         });
       }
       this.setData({ markers });
-      if (partnerLoc && partnerLoc.latitude) this._markersInited = true;
-      this._updatePolyline();
+      this._markersInited = true;
     };
 
     /**
-     * 更新标记位置（高频调用）
-     * 用 findIndex 按 id 查找，不硬编码下标
+     * 添加/更新目的地标记（markers 已初始化后，目的地变更时调用）
+     * 已有则原地替换，没有则追加
      */
-    page._updateMarkerPositions = function () {
-      if (!this._markersInited) return;
-      const partnerLoc = this._cachedPartnerLocation;
-      if (partnerLoc && partnerLoc.latitude) {
-        const idx = this.data.markers.findIndex(m => m.id === 'partner');
-        if (idx < 0) return;
-        this.setData({
-          [`markers[${idx}].latitude`]: partnerLoc.latitude,
-          [`markers[${idx}].longitude`]: partnerLoc.longitude,
-          [`markers[${idx}].rotate`]: partnerLoc.heading || 0,
-        });
-      }
-    };
-
-    /**
-     * 更新连线（两点之间的绿色箭头线）
-     * 双方都有位置时才显示
-     */
-    /** 添加/更新目的地标记（客户设置后立即调用） */
-    page._updateDestinationMarker = function () {
+    page._upsertDestMarker = function () {
       const dest = this.data.destination;
       if (!dest || !dest.latitude) return;
       const markers = [...this.data.markers];
@@ -509,15 +513,15 @@ module.exports = {
         },
         anchor: { x: 0.5, y: 0.5 },
       };
-      if (idx >= 0) {
-        markers[idx] = { ...markers[idx], ...marker };
-      } else {
-        markers.push(marker);
-      }
+      if (idx >= 0) markers[idx] = marker;
+      else markers.push(marker);
       this.setData({ markers });
-      this._markersInited = true;
     };
 
+    /**
+     * 更新连线（两点之间的绿色箭头线）
+     * 双方都有位置时才显示
+     */
     page._updatePolyline = function () {
       const myLoc = this._cachedMyLocation;
       const partnerLoc = this._cachedPartnerLocation;
@@ -587,17 +591,13 @@ module.exports = {
       }, C.STALE_CHECK_INTERVAL);
     };
 
-    /** 更新标记上的文字标签（名称+时间/暂未更新） */
+    /** 更新标记上的文字：正常显示角色名，掉线时显示"暂未更新" */
     page._updateMarkerLabels = function () {
       const idx = this.data.markers.findIndex(m => m.id === 'partner');
       if (idx < 0) return;
-      const label = this.data.partnerStale
-        ? '暂未更新'
-        : (this.data.partnerInfo.nickName || '');
-      const content = this.data.partnerLastUpdate
-        ? label + ' · ' + this.data.partnerLastUpdate
-        : label;
-      this.setData({ [`markers[${idx}].callout.content`]: content });
+      this.setData({
+        [`markers[${idx}].callout.content`]: this.data.partnerStale ? '暂未更新' : this._partnerLabel(),
+      });
     };
 
     /** 停止掉线检测 */
@@ -678,12 +678,7 @@ module.exports = {
      */
     page._handleUnload = function (prefix) {
       if (prefix) console.log(prefix + 'onUnload');
-      locationService.stopUpdating();
-      this._unwatch();
-      this._stopStaleCheck();
-      this._stopUiTimer();
-      this._clearRetryTimers();
-      this._resetState();
+      this._cleanup();
     };
 
     /** 页面 onBack 统一处理 */

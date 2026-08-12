@@ -78,6 +78,35 @@ Page({
     });
   },
 
+  /**
+   * 跳转微信原生地图导航
+   * 优先导航到目的地，无目的地时导航到客户当前位置
+   */
+  onNavigate() {
+    const dest = this.data.destination;
+    const partner = this.data.partnerLocation;
+    let target = null;
+    if (dest && dest.latitude) {
+      target = { latitude: dest.latitude, longitude: dest.longitude, name: dest.name || '目的地' };
+    } else if (partner && partner.latitude) {
+      target = { latitude: partner.latitude, longitude: partner.longitude, name: '客户位置' };
+    }
+    if (!target) {
+      wx.showToast({ title: '暂无导航目标', icon: 'none' });
+      return;
+    }
+    wx.openLocation({
+      latitude: target.latitude,
+      longitude: target.longitude,
+      name: target.name,
+      scale: 18,
+      fail: (err) => {
+        console.error(DBG + '打开导航失败', err);
+        wx.showToast({ title: '打开导航失败', icon: 'none' });
+      },
+    });
+  },
+
   onEndShare() {
     wx.showModal({
       title: '结束救援',
@@ -194,6 +223,9 @@ Page({
     this._unwatch();
     this._stopStaleCheck();
     this._stopUiTimer();
+    // 重置标记初始化标志，下次客户进入时才能重建 markers
+    this._markersInited = false;
+    this._cachedPartnerLocation = null;
 
     // 重置防重入标志，允许下一位客户再次加入（watch 仍在监听房间状态）
     this._joining = false;

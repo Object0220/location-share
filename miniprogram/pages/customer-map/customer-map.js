@@ -119,8 +119,7 @@ Page({
       const result = await roomService.setDestination(this.roomId, dest);
       if (result.code === 0) {
         this.setData({ destination: dest });
-        // 立即更新地图标记
-      //  this._updateDestinationMarker();
+        // 目的地标记由房间 watch 回调（_watchRoomEnded）自动更新
         wx.showToast({ title: '目的地已设置', icon: 'success' });
         console.log(DBG + '📍 目的地坐标:', dest.latitude, dest.longitude);
       } else {

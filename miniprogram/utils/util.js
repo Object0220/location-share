@@ -10,7 +10,6 @@
 function formatTimeAgo(timestamp) {
   const now = Date.now();
   const diff = now - timestamp;
-  if (diff < 0) return '0秒';
   if (diff < 1000) return '0秒';
   return Math.floor(diff / 1000) + '秒';
 }
