@@ -17,8 +17,8 @@
     <view class="avatar-circle">
       <text class="avatar-icon">🔑</text>
     </view>
-    <text class="page-title">加入救援</text>
-    <text class="page-desc">输入拖车司机的手机号后四位即可加入</text>
+    <text class="page-title">查看救援进度</text>
+    <text class="page-desc">输入手机号后四位即可加入</text>
   </view>
 
   <!-- 输入卡片 -->

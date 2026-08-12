@@ -15,6 +15,7 @@ Page({
     ...shared.getDefaultData(),
     waitingForPartner: false,
     shareCode: '',
+    shareEnded: false,
     partnerInfo: { nickName: ROLE_NAMES.customer, avatarUrl: '' },
   },
   ...shared.getDefaultFields(),
@@ -37,9 +38,10 @@ Page({
     }
 
     this._resetState();
+    this._selfEnded = false;
     this.roomId = room.roomId;
     this.userId = app.globalData.openid;
-    this.setData({ waitingForPartner: true, shareCode: room.shareCode || '' });
+    this.setData({ waitingForPartner: true, shareCode: room.shareCode || '', shareEnded: false });
     console.log(DBG + '⏳ 等待客户加入 shareCode=' + room.shareCode);
 
     // 监听客户加入 + 共享结束
@@ -60,7 +62,14 @@ Page({
     this._handleUnload(DBG);
   },
 
-  onBack() { this._handleBack(); },
+  onBack() {
+    // 结束态下不关闭页面，统一回到首页
+    if (this.data.shareEnded) {
+      this.onEndedGoHome();
+      return;
+    }
+    this._handleBack();
+  },
 
   onCopyCode() {
     wx.setClipboardData({
@@ -76,40 +85,44 @@ Page({
       confirmColor: '#fa5151',
       success: async (res) => {
         if (!res.confirm) return;
+        // 标记"司机主动结束"：房间置为 ended 后，本页 watch 也会收到 ended 事件，
+        // 此时不能走 _onRoomEnded 的"返回上一页"分支，而应停留在当前页面显示结束态
+        this._selfEnded = true;
         try {
           wx.showLoading({ title: '结束救援...' });
           await roomService.leaveRoom(this.roomId, 'driver');
           wx.hideLoading();
-          const pages = getCurrentPages();
-          wx.navigateBack({ delta: Math.max(1, Math.min(pages.length, 2)) });
+          // 主动结束：关闭"等待客户加入"监听，清理资源，但停留在当前页面
+          this._closeJoinWatcher();
+          this._onRoomEnded();
         } catch (err) {
           wx.hideLoading();
           console.error(DBG + '结束失败', err);
-          app.clearRoom();
-          const pages = getCurrentPages();
-          wx.navigateBack({ delta: Math.max(1, Math.min(pages.length, 2)) });
+          this._selfEnded = false;
+          wx.showToast({ title: '结束失败，请重试', icon: 'none' });
         }
       },
     });
   },
 
+  /**
+   * 结束态页面：返回首页
+   */
+  onEndedGoHome() {
+    wx.reLaunch({ url: '/pages/index/index' });
+  },
+
   // ====== 司机独有逻辑：等待客户加入 ======
 
   /**
-   * 关闭"等待客户加入"的 watch 与轮询（页面卸载时调用）
-   * 防止页面退出后 watcher 与定时器继续执行
+   * 关闭"等待客户加入"的 watch（页面卸载/结束共享时调用）
+   * 防止页面退出后 watcher 继续执行
    */
   _closeJoinWatcher() {
     if (this._joinWatcher) {
       try { this._joinWatcher.close(); } catch (e) {}
       this._joinWatcher = null;
     }
-    this._joinPollStopped = true;
-    if (this._pollTimer) {
-      clearTimeout(this._pollTimer);
-      this._pollTimer = null;
-    }
-    this._joinPollTimer = false;
   },
 
   _watchForPartnerJoin() {
@@ -117,20 +130,12 @@ Page({
     const db = wx.cloud.database();
     const that = this;
 
-    // 先预申请定位权限
+    // 创建房间即开始持续上报位置（等待客户期间也上报，保证房间生命周期由司机控制）
     locationService.requestPermission().then(granted => {
       if (granted) {
-        wx.getLocation({
-          type: 'gcj02',
-          success: (res) => {
-            const loc = { latitude: res.latitude, longitude: res.longitude };
-            console.log(DBG + '🚩 预定位 lat=' + loc.latitude.toFixed(5) + ' lng=' + loc.longitude.toFixed(5));
-            that.setData({ myLocation: loc, isFirstLoad: false });
-          },
-          fail: (err) => {
-            console.warn(DBG + '⚠️ 预定位失败', err.errMsg || err.message || err);
-          },
-        });
+        that._startLocationServices();
+      } else {
+        that._showLocationError('定位权限被拒绝，请在设置中开启');
       }
     });
 
@@ -143,52 +148,24 @@ Page({
           console.log(DBG + '🎉 客户已加入! nickName=' + (room.userB.nickName || ROLE_NAMES.customer));
           that._onPartnerJoined(room.userB, room);
         }
+        if (room.status === 'waiting') {
+          // 客户退出 → 回到等待态（房间保持 waiting，生命周期不受客户影响）
+          that._onPartnerLeft();
+        }
         if (room.status === 'ended') {
           that._onRoomEnded();
         }
       },
       onError: (err) => {
-        console.error(DBG + '❌ watch 失败', err);
-        that._pollForPartnerJoin();
+        // watch 是唯一监听通道，断开即失效，记录日志以便排查
+        console.error(DBG + '❌ watch 失败，客户加入/退出将无法感知', err);
       },
     });
-
-    // polling 备用
-    this._pollForPartnerJoin();
-  },
-
-  _pollForPartnerJoin() {
-    if (this._joinPollTimer) return;
-    this._joinPollTimer = true;
-    this._joinPollStopped = false;
-    const poll = () => {
-      if (this._joinPollStopped) return;
-      this._pollTimer = setTimeout(async () => {
-        if (this._joinPollStopped) return;
-        try {
-          const db = wx.cloud.database();
-          const room = (await db.collection('rooms').doc(this.roomId).get()).data;
-          if (!room) return;
-          if (room.status === 'active' && room.userB && this.data.waitingForPartner) {
-            console.log(DBG + '🎉 (轮询) 客户已加入');
-            this._onPartnerJoined(room.userB, room);
-            return;
-          }
-          if (room.status === 'ended') { this._onRoomEnded(); return; }
-        } catch (err) {
-          console.warn(DBG + '⚠️ 查询房间状态失败', err.errMsg || err.message || err);
-        }
-        poll();
-      }, 5000);
-    };
-    poll();
   },
 
   _onPartnerJoined(partnerInfo, roomData) {
     if (this._joining) return;
     this._joining = true;
-    this._joinPollStopped = true;
-    if (this._pollTimer) { clearTimeout(this._pollTimer); this._pollTimer = null; }
 
     app.saveRoom({
       roomId: roomData._id || this.roomId,
@@ -203,5 +180,41 @@ Page({
 
     console.log(DBG + '🚀 客户已加入，启动位置共享');
     this._requestPermissions('driver');
+  },
+
+  /**
+   * 客户退出 → 司机回到"等待客户加入"状态
+   * 房间保持 waiting，生命周期不受客户影响，司机位置继续上报
+   */
+  _onPartnerLeft() {
+    if (!this._joining) return;
+    console.log(DBG + '👋 客户已退出，回到等待状态');
+
+    // 停止共享阶段的对方位置监听 / 房间 ended 监听 / 定时器（位置上报继续）
+    this._unwatch();
+    this._stopStaleCheck();
+    this._stopUiTimer();
+
+    // 重置防重入标志，允许下一位客户再次加入（watch 仍在监听房间状态）
+    this._joining = false;
+
+    // 更新房间状态为 waiting（继续等待下一位客户）
+    app.saveRoom({
+      roomId: this.roomId,
+      shareCode: this.data.shareCode,
+      role: 'A', status: 'waiting', partnerInfo: null,
+    });
+
+    this.setData({
+      waitingForPartner: true,
+      partnerLocation: null,
+      partnerOnline: false,
+      partnerStale: false,
+      markers: [],
+      polyline: [],
+      distance: null,
+    });
+
+    wx.showToast({ title: '客户已退出，继续等待', icon: 'none' });
   },
 });

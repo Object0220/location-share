@@ -1,24 +1,33 @@
-<!-- 司机地图页 -->
+<!-- ============================================================
+  司机地图页（driver-map）
+  职责：创建/加入房间后展示地图，实时显示司机与客户双方位置，
+        提供共享码、救援地址、结束共享等核心交互。
+  状态切换：等待客户(waitingForPartner) → 共享中 → 已结束(shareEnded)
+============================================================ -->
 <view class="page">
+
+  <!-- ══════════ 1. 地图（最底层，全屏铺满） ══════════ -->
+  <!-- myLocation: 司机自身定位；markers: 双方位置标记；polyline: 双方连线 -->
   <map
     id="map"
     class="map"
-    latitude="{{myLocation.latitude || 39.9042}}"
-    longitude="{{myLocation.longitude || 116.4074}}"
+    latitude="{{myLocation.latitude}}"
+    longitude="{{myLocation.longitude}}"
     scale="{{mapScale}}"
     markers="{{markers}}"
     polyline="{{polyline}}"
     show-location="{{true}}"
     enable-satellite="{{satelliteMode}}"
     style="width: 100%; height: 100vh;"
-    bindmarkertap="onMarkerTap"
     bindscalechange="onScaleChange"
     bindregionchange="onRegionChange">
   </map>
 
-  <!-- 等待客户 → 顶部信息卡 -->
+  <!-- ══════════ 2. 等待客户阶段：顶部信息卡 ══════════ -->
+  <!-- wx:if="{{waitingForPartner}}"：房间创建后、客户加入前显示 -->
   <view class="info-bar" wx:if="{{waitingForPartner}}">
     <view class="waiting-bar">
+      <!-- 三点跳动动画，示意"等待中" -->
       <view class="waiting-dots">
         <view class="dot"></view>
         <view class="dot"></view>
@@ -28,6 +37,7 @@
         <text class="waiting-title">等待客户加入</text>
         <text class="waiting-hint">将共享码发给客户</text>
       </view>
+      <!-- 共享码：点击可复制，客户凭此码加入房间 -->
       <view class="share-code-tag" bindtap="onCopyCode">
         <text class="share-code-text">{{shareCode}}</text>
         <text class="share-code-hint">点击复制</text>
@@ -35,25 +45,31 @@
     </view>
   </view>
 
-  <!-- 位置共享中 → 信息卡（客户信息 + 救援地址） -->
+  <!-- ══════════ 3. 共享中阶段：信息卡（客户信息 + 救援地址） ══════════ -->
+  <!-- wx:else：客户已加入，与上方"等待客户"互斥显示 -->
   <view class="info-card" wx:else>
     <view class="info-card-row">
+      <!-- 左侧：客户头像 + 昵称 + 在线状态 -->
       <view class="info-card-left">
         <image class="partner-avatar" src="{{partnerInfo.avatarUrl || '/images/ic_js.svg'}}" mode="aspectFill" />
         <view class="partner-detail">
           <text class="partner-name">{{partnerInfo.nickName || '客户'}}</text>
           <view class="partner-status">
+            <!-- 绿点=在线，灰点=离线 -->
             <view class="status-dot {{partnerOnline ? 'online' : 'offline'}}"></view>
             <text class="status-text">{{partnerOnline ? '在线' : '离线'}}</text>
+            <!-- 客户最近一次上报时间 -->
             <text class="update-time" wx:if="{{partnerLastUpdate}}">· {{partnerLastUpdate}}</text>
           </view>
         </view>
       </view>
+      <!-- 右侧：与客户的距离 -->
       <view class="info-card-right">
         <text class="distance-text" wx:if="{{distance !== null}}">{{distance}}</text>
       </view>
     </view>
-    <!-- 救援地址行 -->
+
+    <!-- 救援地址行：仅客户设置了救援目的地时显示 -->
     <view class="info-card-divider" wx:if="{{destination}}"></view>
     <view class="info-card-addr" wx:if="{{destination}}">
       <text class="addr-icon">🚩</text>
@@ -66,51 +82,32 @@
     </view>
   </view>
 
+  <!-- ══════════ 4. 定位失败提示（带重试按钮） ══════════ -->
   <view class="location-error" wx:if="{{locationError}}">
     <text class="location-error-icon">⚠️</text>
     <text class="location-error-text">{{locationError}}</text>
     <button class="location-retry-btn" bindtap="onRetryLocation">重试</button>
   </view>
 
+  <!-- ══════════ 5. 客户位置超时未更新提示 ══════════ -->
   <view class="stale-notice" wx:if="{{partnerStale}}">
     <text>⏳ 客户位置暂未更新</text>
   </view>
 
-  <view class="modal-overlay" wx:if="{{showPartnerDetail}}" bindtap="onCloseDetail">
-    <view class="modal-sheet" catchtap="">
-      <view class="sheet-handle"></view>
-      <view class="sheet-header">
-        <image class="sheet-avatar" src="{{partnerInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
-        <view class="sheet-meta">
-          <text class="sheet-name">{{partnerInfo.nickName || '客户'}}</text>
-          <view class="sheet-online">
-            <view class="online-dot {{partnerOnline ? '' : 'off'}}"></view>
-            <text>{{partnerOnline ? '在线' : '离线'}}</text>
-          </view>
-        </view>
-      </view>
-      <view class="sheet-stats">
-        <view class="stat-item">
-          <text class="stat-value">{{distance || '--'}}</text>
-          <text class="stat-label">距离</text>
-        </view>
-        <view class="stat-item">
-          <text class="stat-value">{{partnerSpeed || '0'}}<text class="stat-unit">m/s</text></text>
-          <text class="stat-label">速度</text>
-        </view>
-        <view class="stat-item">
-          <text class="stat-value">{{partnerHeading || '0'}}°</text>
-          <text class="stat-label">方向</text>
-        </view>
-        <view class="stat-item">
-          <text class="stat-value">{{partnerLastUpdate || '--'}}</text>
-          <text class="stat-label">更新</text>
-        </view>
-      </view>
+  <!-- ══════════ 6. 已结束态：全屏覆盖层 ══════════ -->
+  <!-- shareEnded：司机点"结束共享"成功后停留本页，不自动返回 -->
+  <view class="ended-overlay" wx:if="{{shareEnded}}">
+    <view class="ended-card">
+      <view class="ended-icon">🏁</view>
+      <text class="ended-title">救援已结束</text>
+      <text class="ended-desc">位置共享已停止，客户将不再看到你的位置</text>
+      <button class="ended-btn" bindtap="onEndedGoHome">返回首页</button>
     </view>
   </view>
 
-  <view class="bottom-controls safe-area-bottom">
+  <!-- ══════════ 7. 底部操作栏 ══════════ -->
+  <!-- 共享中才显示；结束态时隐藏该栏（由上方 ended-overlay 接管） -->
+  <view class="bottom-controls safe-area-bottom" wx:if="{{!shareEnded}}">
     <button class="btn-end-share" bindtap="onEndShare">结束共享</button>
   </view>
 </view>

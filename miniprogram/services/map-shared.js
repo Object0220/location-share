@@ -5,8 +5,8 @@
  *
  * 职责边界：
  * - 定位服务启动           ✓（委托 location.js）
- * - 对方位置监听+轮询      ✓
- * - 房间 ended 监听+轮询   ✓
+ * - 对方位置监听           ✓（watch 实时推送，断线自动重连）
+ * - 房间 ended 监听        ✓（watch 实时推送，断线自动重连）
  * - 地图标记/连线/UI 更新  ✓
  * - 掉线检测/重试          ✓
  *
@@ -69,12 +69,8 @@ module.exports = {
       userId: '',
       _staleCheckTimer: null,         // 掉线检测 interval id
       _updateUiTimer: null,            // UI 刷新 interval id
-      _locationWatchTimer: null,       // 位置轮询 setTimeout id
-      _pollingGuard: false,            // 防重复启动轮询
       _unwatchLocation: null,          // 位置 watch 的取消函数
       _roomStatusWatcher: null,        // 房间 ended watch 实例
-      _roomStatusPollTimer: null,      // 房间 ended 轮询 timer
-      _roomStatusPollStopped: false,   // 房间轮询停止标记（比 clearTimeout 可靠）
       _lastPartnerTimestamp: 0,        // 对方最后一次位置更新时间戳
       _lastPartnerTick: 0,             // 节流用时间戳
       _watchPartnerRetryCount: 0,      // 位置 watch 重试计数（指数退避）
@@ -150,7 +146,7 @@ module.exports = {
      * 1. requestPermission            ← 前台定位授权（阻塞）
      * 2. checkPermission → 后台授权   ← 可选，不阻塞
      * 3. startLocationServices        ← 开始定位+上报
-     * 4. startWatchingPartner         ← 监听对方位置（watch+轮询）
+     * 4. startWatchingPartner         ← 监听对方位置（watch 实时推送）
      * 5. watchRoomEnded               ← 监听共享结束
      * 6. startBackgroundUpdate(延迟5s)← 后台定位，与 startLocation 错开频率限制
      *
@@ -197,11 +193,8 @@ module.exports = {
     // ----- 对方位置监听 -----
 
     /**
-     * 监听对方位置变化
-     * 双通道：watch（实时推送） + polling（5s轮询兜底）
-     *
-     * watch 不可用时自动降级到轮询
-     * 轮询有 _pollingGuard + _pollingStopped 防双循环
+     * 监听对方位置变化（watch 实时推送，唯一通道）
+     * 断线后由 _scheduleWatchPartnerRetry 指数退避自动重连
      */
     page._startWatchingPartner = function () {
       this._watchPartnerRetryCount = 0;
@@ -223,43 +216,6 @@ module.exports = {
           }
         }
       );
-      this._startPollingPartner();
-    };
-
-    /**
-     * 位置轮询（watch 兜底）
-     * 查 locations 集合中对方的文档（userId 不等于自己）
-     */
-    page._startPollingPartner = function () {
-      if (this._pollingGuard) return;
-      this._pollingGuard = true;
-      this._pollingStopped = false;
-      const poll = () => {
-        if (this._pollingStopped) return;
-        this._locationWatchTimer = setTimeout(async () => {
-          if (this._pollingStopped) return;
-          try {
-            const db = wx.cloud.database();
-            const res = await db.collection('locations')
-              .where({ roomId: this.roomId, userId: db.command.neq(this.userId) }).get();
-            if (res.data && res.data.length > 0) this._onPartnerLocationUpdate(res.data[0]);
-          } catch (err) {
-            console.warn('⚠️ 轮询失败', err.errMsg || err.message || err);
-          }
-          poll();
-        }, 5000);
-      };
-      poll();
-    };
-
-    /** 停止位置轮询 */
-    page._stopPolling = function () {
-      this._pollingStopped = true;
-      this._pollingGuard = false;
-      if (this._locationWatchTimer) {
-        clearTimeout(this._locationWatchTimer);
-        this._locationWatchTimer = null;
-      }
     };
 
     /**
@@ -279,9 +235,9 @@ module.exports = {
     // ----- 房间 ended 监听 -----
 
     /**
-     * 监听房间 ended 状态
+     * 监听房间 ended 状态（watch 实时推送，唯一通道）
      * 当对方结束救援时，自动返回首页
-     * watch（实时） + polling（5s轮询兜底）
+     * 断线后由 _scheduleWatchRoomRetry 指数退避自动重连
      *
      * @param {string} role - 'driver' | 'customer'
      */
@@ -320,48 +276,6 @@ module.exports = {
           this._scheduleWatchRoomRetry();
         },
       });
-      this._startPollingRoomEnded(prefix);
-    };
-
-    /**
-     * 房间 ended 轮询兜底
-     * 每5s查一次 rooms 集合，检测到 ended 就退出
-     */
-    page._startPollingRoomEnded = function (prefix) {
-      if (!this.roomId) return;
-      this._roomStatusPollStopped = false;
-      if (this._roomStatusPollTimer) {
-        clearTimeout(this._roomStatusPollTimer);
-        this._roomStatusPollTimer = null;
-      }
-      const poll = () => {
-        if (this._roomStatusPollStopped) return;
-        this._roomStatusPollTimer = setTimeout(async () => {
-          if (this._roomStatusPollStopped) return;
-          try {
-            const db = wx.cloud.database();
-            const room = (await db.collection('rooms').doc(this.roomId).get()).data;
-            if (room && room.status === 'ended') {
-              console.log(prefix + ' 🔚 (轮询) 对方已结束救援');
-              this._onRoomEnded();
-              return;
-            }
-          } catch (err) {
-            console.warn(prefix + ' ⚠️ 房间状态轮询失败', err.errMsg || err.message || err);
-          }
-          poll();
-        }, 5000);
-      };
-      poll();
-    };
-
-    /** 停止房间 ended 轮询 */
-    page._stopPollingRoomEnded = function () {
-      this._roomStatusPollStopped = true;
-      if (this._roomStatusPollTimer) {
-        clearTimeout(this._roomStatusPollTimer);
-        this._roomStatusPollTimer = null;
-      }
     };
 
     /**
@@ -379,8 +293,12 @@ module.exports = {
 
     /**
      * 共享结束处理
-     * 清理所有资源：watch、轮询、定位、定时器、房间数据
-     * 然后返回上一页
+     * 清理所有资源：watch、定位、定时器、房间数据
+     *
+     * 结束来源：
+     * - 对方结束救援 → 提示后返回上一页
+     * - 司机主动结束（this._selfEnded）→ 停留在当前页面显示结束态，
+     *   不自动关闭界面，由用户点击"返回首页"离开
      */
     page._onRoomEnded = function () {
       console.log('🔚 共享已结束');
@@ -388,17 +306,25 @@ module.exports = {
       locationService.stopUpdating();
       this._stopStaleCheck();
       this._stopUiTimer();
-      this._stopPolling();
       this._clearRetryTimers();
       this._resetState();
       getApp().clearRoom();
+
+      // 司机主动结束：不关闭页面，展示结束态
+      if (this._selfEnded) {
+        console.log('🚗 司机主动结束，停留在当前页面');
+        this.setData({ shareEnded: true });
+        return;
+      }
+
+      // 对方结束（或房间被清理）：提示后返回上一页
       wx.showToast({ title: '救援已结束', icon: 'none' });
       setTimeout(() => wx.navigateBack(), 1500);
     };
 
     /**
      * 统一关闭所有监听器
-     * 包括：位置 watch、房间 watch、房间轮询
+     * 包括：位置 watch、房间 watch
      */
     page._unwatch = function () {
       if (this._unwatchLocation) {
@@ -409,7 +335,6 @@ module.exports = {
         this._roomStatusWatcher.close();
         this._roomStatusWatcher = null;
       }
-      this._stopPollingRoomEnded();
     };
 
     // ----- 位置更新回调 -----
@@ -448,7 +373,7 @@ module.exports = {
 
     /**
      * 对方位置更新
-     * 由 watch 或 polling 触发
+     * 由 watch 实时推送触发
      * - 有 PARTNER_UPDATE_THROTTLE 节流（防高频 setData）
      * - 更新距离计算
      * - 更新标记 + 连线
@@ -748,7 +673,7 @@ module.exports = {
 
     /**
      * 页面 onUnload 统一清理
-     * 停止定位、关闭 watch、停止轮询/定时器、重置状态
+     * 停止定位、关闭 watch、停止定时器、重置状态
      * @param {string} [prefix] - 页面日志前缀（如 '🚗 [driver-map]'）
      */
     page._handleUnload = function (prefix) {
@@ -757,7 +682,6 @@ module.exports = {
       this._unwatch();
       this._stopStaleCheck();
       this._stopUiTimer();
-      this._stopPolling();
       this._clearRetryTimers();
       this._resetState();
     };
