@@ -7,6 +7,7 @@ const app = getApp();
 const locationService = require('../../services/location');
 const roomService = require('../../services/room');
 const shared = require('../../services/map-shared');
+const { ROLE_NAMES } = require('../../constants');
 const DBG = '🚗 [driver-map]';
 
 Page({
@@ -14,7 +15,7 @@ Page({
     ...shared.getDefaultData(),
     waitingForPartner: false,
     shareCode: '',
-    partnerInfo: { nickName: '客户', avatarUrl: '' },
+    partnerInfo: { nickName: ROLE_NAMES.customer, avatarUrl: '' },
   },
   ...shared.getDefaultFields(),
 
@@ -46,31 +47,20 @@ Page({
   },
 
   onShow() {
-    const room = app.globalData.currentRoom;
-    if (!room) return;
-    if (room.status === 'waiting') return;
-    if (room.status !== 'active') { this._showLocationError('共享已结束'); return; }
-    if (this.roomId && this.userId) locationService.onForeground(this.roomId, this.userId);
-    this._startUiTimer();
+    this._handleShow();
   },
 
   onHide() {
-    if (this.roomId && this.userId) locationService.onBackground(this.roomId, this.userId);
-    this._stopUiTimer();
+    this._handleHide();
   },
 
   onUnload() {
-    console.log(DBG + 'onUnload');
-    locationService.stopUpdating();
-    this._unwatch();
-    this._stopStaleCheck();
-    this._stopUiTimer();
-    this._stopPolling();
-    this._clearRetryTimers();
-    this._resetState();
+    // 先关闭司机页特有的"等待客户加入"监听，再走统一清理
+    this._closeJoinWatcher();
+    this._handleUnload(DBG);
   },
 
-  onBack() { wx.navigateBack(); },
+  onBack() { this._handleBack(); },
 
   onCopyCode() {
     wx.setClipboardData({
@@ -105,6 +95,23 @@ Page({
 
   // ====== 司机独有逻辑：等待客户加入 ======
 
+  /**
+   * 关闭"等待客户加入"的 watch 与轮询（页面卸载时调用）
+   * 防止页面退出后 watcher 与定时器继续执行
+   */
+  _closeJoinWatcher() {
+    if (this._joinWatcher) {
+      try { this._joinWatcher.close(); } catch (e) {}
+      this._joinWatcher = null;
+    }
+    this._joinPollStopped = true;
+    if (this._pollTimer) {
+      clearTimeout(this._pollTimer);
+      this._pollTimer = null;
+    }
+    this._joinPollTimer = false;
+  },
+
   _watchForPartnerJoin() {
     if (!this.roomId) return;
     const db = wx.cloud.database();
@@ -120,18 +127,20 @@ Page({
             console.log(DBG + '🚩 预定位 lat=' + loc.latitude.toFixed(5) + ' lng=' + loc.longitude.toFixed(5));
             that.setData({ myLocation: loc, isFirstLoad: false });
           },
-          fail: () => {},
+          fail: (err) => {
+            console.warn(DBG + '⚠️ 预定位失败', err.errMsg || err.message || err);
+          },
         });
       }
     });
 
-    db.collection('rooms').doc(this.roomId).watch({
+    this._joinWatcher = db.collection('rooms').doc(this.roomId).watch({
       onChange: (snapshot) => {
         if (snapshot.type === 'init') return;
         const room = snapshot.docs && snapshot.docs[0];
         if (!room) return;
         if (room.status === 'active' && room.userB) {
-          console.log(DBG + '🎉 客户已加入! nickName=' + (room.userB.nickName || '客户'));
+          console.log(DBG + '🎉 客户已加入! nickName=' + (room.userB.nickName || ROLE_NAMES.customer));
           that._onPartnerJoined(room.userB, room);
         }
         if (room.status === 'ended') {
@@ -151,8 +160,11 @@ Page({
   _pollForPartnerJoin() {
     if (this._joinPollTimer) return;
     this._joinPollTimer = true;
+    this._joinPollStopped = false;
     const poll = () => {
+      if (this._joinPollStopped) return;
       this._pollTimer = setTimeout(async () => {
+        if (this._joinPollStopped) return;
         try {
           const db = wx.cloud.database();
           const room = (await db.collection('rooms').doc(this.roomId).get()).data;
@@ -163,7 +175,9 @@ Page({
             return;
           }
           if (room.status === 'ended') { this._onRoomEnded(); return; }
-        } catch (_) {}
+        } catch (err) {
+          console.warn(DBG + '⚠️ 查询房间状态失败', err.errMsg || err.message || err);
+        }
         poll();
       }, 5000);
     };
@@ -173,6 +187,7 @@ Page({
   _onPartnerJoined(partnerInfo, roomData) {
     if (this._joining) return;
     this._joining = true;
+    this._joinPollStopped = true;
     if (this._pollTimer) { clearTimeout(this._pollTimer); this._pollTimer = null; }
 
     app.saveRoom({
@@ -183,7 +198,7 @@ Page({
 
     this.setData({
       waitingForPartner: false,
-      partnerInfo: { nickName: partnerInfo.nickName || '客户', avatarUrl: partnerInfo.avatarUrl || '' },
+      partnerInfo: { nickName: partnerInfo.nickName || ROLE_NAMES.customer, avatarUrl: partnerInfo.avatarUrl || '' },
     });
 
     console.log(DBG + '🚀 客户已加入，启动位置共享');

@@ -3,6 +3,8 @@
  * 管理共享码生成、配对、房间状态、实时数据订阅
  */
 
+const { ROLE_NAMES } = require('../constants');
+
 // 不能用顶层 getApp()，App() 初始化时模块已加载但未完成
 // 改为在函数内部懒加载
 function getAppInstance() {
@@ -37,7 +39,7 @@ module.exports = {
         shareCode,
         userA: {
           userId: openid,
-          nickName: userInfo.nickName || '拖车司机',
+          nickName: userInfo.nickName || ROLE_NAMES.driver,
           avatarUrl: userInfo.avatarUrl || '',
         },
       },
@@ -86,7 +88,7 @@ module.exports = {
         shareCode: shareCode.toUpperCase(),
         userB: {
           userId: openid,
-          nickName: userInfo.nickName || '客户',
+          nickName: userInfo.nickName || ROLE_NAMES.customer,
           avatarUrl: userInfo.avatarUrl || '',
         },
       },

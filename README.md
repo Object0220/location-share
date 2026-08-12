@@ -1,6 +1,6 @@
 # 双人实时位置共享 · 微信小程序
 
-> 两款用户（A 和 B）在地图上实时看到彼此的位置，实现双向位置共享。
+> 两个用户（A 和 B）在地图上实时看到彼此的位置，实现双向位置共享。
 
 ## 项目结构
 
@@ -10,14 +10,18 @@ location-share/
 ├── miniprogram/                  # 小程序前端代码
 │   ├── app.json / app.js / app.wxss
 │   ├── sitemap.json
+│   ├── constants.js             # 全局常量（角色名等文案）
+│   ├── env-config.js            # 环境配置（云环境 ID、定位上报频率）
 │   ├── pages/
-│   │   ├── index/               # 首页（创建/加入房间）
-│   │   ├── map/                 # 地图页（核心位置共享）
+│   │   ├── index/               # 首页（创建/加入房间入口）
+│   │   ├── waiting/             # 司机输入手机号后4位、创建房间、等待页
+│   │   ├── driver-map/          # 司机地图页（等待客户加入 + 位置共享）
+│   │   ├── customer-map/        # 客户地图页（位置共享 + 设置救援目的地）
 │   │   └── join/                # 加入房间页（输入共享码/扫码）
 │   ├── services/
 │   │   ├── location.js          # 定位服务（GPS采集、权限、后台定位）
-│   │   ├── websocket.js         # WebSocket 连接管理（自动重连、心跳）
-│   │   └── room.js              # 房间/配对服务（创建、加入、订阅）
+│   │   ├── room.js              # 房间/配对服务（创建、加入、订阅）
+│   │   └── map-shared.js        # 地图共享通用逻辑（mixin 注入两个地图页）
 │   ├── utils/
 │   │   └── util.js              # 工具函数（距离计算、时间格式化）
 │   └── images/                  # 图片资源（需替换为实际 PNG）
@@ -27,8 +31,12 @@ location-share/
 │   ├── joinRoom/                # 通过共享码加入房间
 │   ├── leaveRoom/               # 结束共享/离开房间
 │   ├── getRoomInfo/             # 获取房间及对方位置信息
+│   ├── setDestination/          # 客户设置救援目的地
+│   ├── initDatabase/            # 初始化数据库集合（首次运行自动创建）
 │   └── cleanExpiredLocations/   # 定时清理过期位置数据
 ```
+
+> **实时位置同步**：采用云开发实时数据推送（watch API）+ 5 秒轮询兜底，不依赖 WebSocket。
 
 ## 快速开始
 
@@ -36,7 +44,7 @@ location-share/
 
 - 安装 [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)
 - 注册小程序并获取 AppID → 替换 `project.config.json` 中的 `appid`
-- 开通云开发 → 创建云环境 → 替换 `miniprogram/app.js` 中的 `env`
+- 开通云开发 → 创建云环境 → 替换 `miniprogram/env-config.js` 中的 `CLOUD_ENV_ID`
 
 ### 2. 部署云函数
 
@@ -81,6 +89,18 @@ location-share/
 2. 编译运行
 3. 真机调试（需要开启 GPS 和定位权限）
 
+### 6. 运行测试
+
+```bash
+# 首次运行需安装测试依赖（jest）
+npm install --save-dev jest
+npm test
+```
+
+测试覆盖：
+- `tests/cloudfunctions.test.js`：云函数核心业务逻辑（通过 mock 微信云开发 SDK 在本地运行）
+- `tests/util.test.js`：前端工具函数（距离计算、时间格式化、防抖、节流）
+
 ## 核心功能
 
 ### 用户配对
@@ -89,7 +109,7 @@ location-share/
 - 配对成功后自动跳转地图页
 
 ### 实时位置
-- 前台每 2 秒上报一次 GPS 坐标
+- 前台每 5 秒上报一次 GPS 坐标（后台每 15 秒，切后台自动降频省电）
 - 后台定位（需用户授权）
 - 使用云开发实时数据推送（watch API）接收对方位置
 - 降级方案：5 秒轮询
@@ -120,7 +140,7 @@ requiredBackgroundModes: ["location"]
 - `share-bg.png` (400x300) - 分享卡片背景
 
 ### 性能优化
-- 前台 2s / 后台 5s 上报频率
+- 前台 5s / 后台 15s 上报频率（由 `miniprogram/env-config.js` 配置）
 - 位置数据仅保留最近 5 分钟（由 cleanExpiredLocations 自动清理）
 - 使用 `db.doc(id).set()` 保证每个用户只有一条最新位置记录
 
@@ -129,7 +149,7 @@ requiredBackgroundModes: ["location"]
 | 场景 | 表现 |
 |------|------|
 | GPS 信号弱 | 红色提示条 + 重试按钮 |
-| WebSocket 断连 | 浮动提示「连接中断，正在重连…」 |
+| 实时订阅断连 | 浮动提示「连接中断，正在重连…」（自动降级轮询 + 指数退避重连） |
 | 对方位置 > 1 分钟未更新 | 黄色提示「对方位置暂未更新」 |
 | 定位权限被拒 | 引导用户去系统设置开启 |
 | 对方退出 | 房间状态标记为 ended，返回首页 |

@@ -96,7 +96,8 @@ module.exports = {
   // 页面 onLoad 时调用一次即可
   //
   // 注入后页面拥有全部 _requestPermissions、_startWatchingPartner 等
-  // 生命周期 onShow/onHide/onUnload 仍需页面自己编写
+  // 生命周期 onShow/onHide/onUnload/onBack 由页面委托给
+  // _handleShow/_handleHide/_handleUnload/_handleBack 统一处理
   // ============================================================
   mixin(page) {
     const C = this.CONSTANTS;
@@ -165,7 +166,9 @@ module.exports = {
       // 后台权限可选，先让地图出来再弹
       locationService.checkPermission().then(perm => {
         if (!perm.background) {
-          setTimeout(() => locationService.requestBackgroundPermission().catch(() => {}), 3000);
+          setTimeout(() => locationService.requestBackgroundPermission().catch(err => {
+            console.warn('⚠️ 申请后台定位权限失败', err.errMsg || err.message || err);
+          }), 3000);
         }
       });
 
@@ -343,7 +346,9 @@ module.exports = {
               this._onRoomEnded();
               return;
             }
-          } catch (_) {}
+          } catch (err) {
+            console.warn(prefix + ' ⚠️ 房间状态轮询失败', err.errMsg || err.message || err);
+          }
           poll();
         }, 5000);
       };
@@ -714,6 +719,52 @@ module.exports = {
     page._showLocationError = function (msg) {
       console.warn('⚠️ ' + msg);
       this.setData({ locationError: msg });
+    };
+
+    // ----- 生命周期处理（页面 onShow/onHide/onUnload/onBack 统一委托）-----
+
+    /**
+     * 页面 onShow 统一处理
+     * - 无房间信息 → 静默返回
+     * - 非 active 状态 → 仅 ended 时提示"共享已结束"，其余静默返回
+     * - active 状态 → 恢复前台定位 + 启动 UI 刷新定时器
+     */
+    page._handleShow = function () {
+      const room = getApp().globalData.currentRoom;
+      if (!room) return;
+      if (room.status !== 'active') {
+        if (room.status === 'ended') this._showLocationError('共享已结束');
+        return;
+      }
+      if (this.roomId && this.userId) locationService.onForeground(this.roomId, this.userId);
+      this._startUiTimer();
+    };
+
+    /** 页面 onHide 统一处理：降级为后台定位 + 停止 UI 刷新定时器 */
+    page._handleHide = function () {
+      if (this.roomId && this.userId) locationService.onBackground(this.roomId, this.userId);
+      this._stopUiTimer();
+    };
+
+    /**
+     * 页面 onUnload 统一清理
+     * 停止定位、关闭 watch、停止轮询/定时器、重置状态
+     * @param {string} [prefix] - 页面日志前缀（如 '🚗 [driver-map]'）
+     */
+    page._handleUnload = function (prefix) {
+      if (prefix) console.log(prefix + 'onUnload');
+      locationService.stopUpdating();
+      this._unwatch();
+      this._stopStaleCheck();
+      this._stopUiTimer();
+      this._stopPolling();
+      this._clearRetryTimers();
+      this._resetState();
+    };
+
+    /** 页面 onBack 统一处理 */
+    page._handleBack = function () {
+      wx.navigateBack();
     };
 
     // ----- 通用事件 -----

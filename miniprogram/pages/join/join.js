@@ -4,6 +4,7 @@
 const app = getApp();
 const roomService = require('../../services/room');
 const locationService = require('../../services/location');
+const { ROLE_NAMES } = require('../../constants');
 
 Page({
   data: {
@@ -176,7 +177,7 @@ Page({
     }
 
     const userInfo = app.globalData.userInfo || {
-      nickName: '客户',
+      nickName: ROLE_NAMES.customer,
       avatarUrl: '',
     };
 

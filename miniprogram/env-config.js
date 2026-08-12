@@ -3,7 +3,7 @@
  */
 const CONFIG = {
   // 云开发环境 ID
-  CLOUD_ENV_ID: 'cloud1-d1g3zbdz9872533e9',
+  CLOUD_ENV_ID: 'cloudbase-d1gif13eec92ce0f2',
 
   // 定位参数
   LOCATION: {

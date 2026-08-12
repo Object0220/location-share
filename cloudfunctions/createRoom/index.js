@@ -6,6 +6,12 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 
+// 云函数独立部署，无法跨目录引用前端常量，此处定义局部常量
+const ROLE_NAMES = {
+  driver: '拖车司机',
+  customer: '客户',
+};
+
 exports.main = async (event, context) => {
   const { roomId, shareCode, userA } = event;
   const wxContext = cloud.getWXContext();
@@ -97,7 +103,7 @@ exports.main = async (event, context) => {
       shareCode: finalShareCode,
       userA: {
         userId: openid,
-        nickName: userA.nickName || '拖车司机',
+        nickName: userA.nickName || ROLE_NAMES.driver,
         avatarUrl: userA.avatarUrl || '',
       },
       userB: {},
@@ -117,7 +123,7 @@ exports.main = async (event, context) => {
       shareCode: finalShareCode,
       status: 'waiting',
       userA_id: openid,
-      userA_name: userA.nickName || '拖车司机',
+      userA_name: userA.nickName || ROLE_NAMES.driver,
     }));
     return {
       code: 0,

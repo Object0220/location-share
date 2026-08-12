@@ -260,6 +260,7 @@ describe('🚪 leaveRoom', () => {
     expect(dbStore.locations.size).toBe(2);
 
     // A 离开房间
+    setCurrentUser('user_A');
     const res = await leaveRoom.main({ roomId: 'room_001' });
     expect(res.code).toBe(0);
 

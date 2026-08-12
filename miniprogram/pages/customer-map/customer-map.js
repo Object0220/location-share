@@ -3,15 +3,15 @@
  * 加入房间后 → 直接启动位置共享（委托给 map-shared）
  */
 const app = getApp();
-const locationService = require('../../services/location');
 const roomService = require('../../services/room');
 const shared = require('../../services/map-shared');
+const { ROLE_NAMES } = require('../../constants');
 const DBG = '👤 [customer-map]';
 
 Page({
   data: {
     ...shared.getDefaultData(),
-    partnerInfo: { nickName: '拖车司机', avatarUrl: '' },
+    partnerInfo: { nickName: ROLE_NAMES.driver, avatarUrl: '' },
     settingDest: false,
   },
   ...shared.getDefaultFields(),
@@ -39,7 +39,7 @@ Page({
     if (room.partnerInfo) {
       this.setData({
         partnerInfo: {
-          nickName: room.partnerInfo.nickName || '拖车司机',
+          nickName: room.partnerInfo.nickName || ROLE_NAMES.driver,
           avatarUrl: room.partnerInfo.avatarUrl || '',
         },
       });
@@ -50,32 +50,18 @@ Page({
   },
 
   onShow() {
-    const room = app.globalData.currentRoom;
-    if (!room || room.status !== 'active') {
-      if (room && room.status === 'ended') this._showLocationError('共享已结束');
-      return;
-    }
-    if (this.roomId && this.userId) locationService.onForeground(this.roomId, this.userId);
-    this._startUiTimer();
+    this._handleShow();
   },
 
   onHide() {
-    if (this.roomId && this.userId) locationService.onBackground(this.roomId, this.userId);
-    this._stopUiTimer();
+    this._handleHide();
   },
 
   onUnload() {
-    console.log(DBG + 'onUnload');
-    locationService.stopUpdating();
-    this._unwatch();
-    this._stopStaleCheck();
-    this._stopUiTimer();
-    this._stopPolling();
-    this._clearRetryTimers();
-    this._resetState();
+    this._handleUnload(DBG);
   },
 
-  onBack() { wx.navigateBack(); },
+  onBack() { this._handleBack(); },
 
   // ====== 救援目的地 ======
 

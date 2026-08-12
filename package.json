@@ -1,14 +1,14 @@
 {
   "name": "location-share",
   "version": "1.0.0",
-  "description": "> 两款用户（A 和 B）在地图上实时看到彼此的位置，实现双向位置共享。",
+  "description": "> 两个用户（A 和 B）在地图上实时看到彼此的位置，实现双向位置共享。",
   "main": "jest.config.js",
   "directories": {
     "doc": "docs",
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "repository": {
     "type": "git",

@@ -5,6 +5,7 @@
 const app = getApp();
 const roomService = require('../../services/room');
 const locationService = require('../../services/location');
+const { ROLE_NAMES } = require('../../constants');
 
 Page({
   data: {
@@ -93,7 +94,7 @@ Page({
     }
 
     // 2. 获取用户信息
-    const userInfo = app.globalData.userInfo || { nickName: '拖车司机', avatarUrl: '' };
+    const userInfo = app.globalData.userInfo || { nickName: ROLE_NAMES.driver, avatarUrl: '' };
     app.globalData.userInfo = userInfo;
 
     // 3. 确认对话框

@@ -7,6 +7,12 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
 
+// 云函数独立部署，无法跨目录引用前端常量，此处定义局部常量
+const ROLE_NAMES = {
+  driver: '拖车司机',
+  customer: '客户',
+};
+
 exports.main = async (event, context) => {
   const { shareCode, userB } = event;
   const wxContext = cloud.getWXContext();
@@ -36,6 +42,12 @@ exports.main = async (event, context) => {
 
     const room = roomRes.data[0];
     console.log('🔗 [joinRoom] 找到房间 roomId=' + room._id + ' creator=' + room.userA.userId + ' caller=' + openid);
+
+    // 发起者不能加入自己创建的房间
+    if (room.userA.userId === openid) {
+      console.warn('🔗 [joinRoom] ❌ 不能加入自己创建的房间 roomId=' + room._id);
+      return { code: -1, message: '不能加入自己创建的房间' };
+    }
 
     // 检查是否已经在其他活跃房间中
     console.log('🔗 [joinRoom] 检查是否在其他活跃房间中');
@@ -70,7 +82,7 @@ exports.main = async (event, context) => {
         data: {
           userB: _.set({
             userId: openid,
-            nickName: userB.nickName || '客户',
+            nickName: userB.nickName || ROLE_NAMES.customer,
             avatarUrl: userB.avatarUrl || '',
           }),
           status: 'active',

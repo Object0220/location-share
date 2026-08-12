@@ -155,8 +155,10 @@ App({
         data: { _init: true, createdAt: db.serverDate() },
         success() {
           console.log(`✅ 集合 ${name} 创建/写入成功`);
-          // 清理初始数据
-          db.collection(name).where({ _init: true }).remove().catch(() => {});
+          // 清理初始数据（失败不影响主流程，仅记录）
+          db.collection(name).where({ _init: true }).remove().catch(err => {
+            console.warn(`📦 [initDB] 清理 ${name} 初始数据失败`, err.errMsg || err.message || err);
+          });
         },
         fail(err) {
           console.warn(`集合 ${name} 写入失败:`, err);
