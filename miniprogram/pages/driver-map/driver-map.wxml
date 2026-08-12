@@ -63,7 +63,14 @@
           </view>
         </view>
       </view>
-   
+      <!-- 右侧：与客户的距离 + 导航按钮 -->
+      <view class="info-card-right">
+        <text class="distance-text" wx:if="{{distance !== null}}">{{distance}}</text>
+        <view class="nav-btn" bindtap="onNavigate">
+          <text class="nav-btn-icon">🧭</text>
+          <text class="nav-btn-text">导航</text>
+        </view>
+      </view>
     </view>
 
     <!-- 救援地址行：仅客户设置了救援目的地时显示 -->
@@ -76,15 +83,6 @@
         <text class="addr-coord">经度 {{destination.longitude}}  纬度 {{destination.latitude}}</text>
       </view>
       <!-- <text class="addr-dist" wx:if="{{destDistance}}">{{destDistance}}</text> -->
-
-   <!-- 右侧：导航按钮，跳转微信原生地图导航（优先目的地，无则导航到客户） -->
-   <view class="info-card-right">
-        <view class="nav-btn" bindtap="onNavigate">
-          <text class="nav-btn-icon">🧭</text>
-          <text class="nav-btn-text">导航</text>
-        </view>
-      </view>
-
     </view>
   </view>
 
