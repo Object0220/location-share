@@ -62,7 +62,6 @@ exports.main = async (event, context) => {
           code: 0,
           roomId: room._id,
           shareCode,
-          qrcodeUrl: '',
         };
       }
 
@@ -72,7 +71,6 @@ exports.main = async (event, context) => {
         code: 0,
         roomId: room._id,
         shareCode: room.shareCode,
-        qrcodeUrl: '',
       };
     }
 
@@ -129,7 +127,6 @@ exports.main = async (event, context) => {
       code: 0,
       roomId: result._id,
       shareCode: finalShareCode,
-      qrcodeUrl: '',
     };
   } catch (err) {
     console.error('🏠 [createRoom] ❌ 创建失败', err);
