@@ -107,11 +107,10 @@ module.exports = {
       _roomStatusWatcher: null,        // 房间 ended watch 实例
       _lastPartnerTimestamp: 0,        // 对方最后一次位置更新时间戳
       _lastPartnerTick: 0,             // 节流用时间戳
-      _watchPartnerRetryCount: 0,      // 位置 watch 重试计数（指数退避）
-      _watchPartnerRetryTimer: null,   // 位置 watch 重试 timer
-      _watchRoomRetryCount: 0,         // 房间 watch 重试计数
-      _watchRoomRetryTimer: null,      // 房间 watch 重试 timer
-      _partnerRawData: null,           // 对方位置原始数据（用于弹窗显示）
+      _watchPartnerRetryCount: 0,      // 位置 watch 重试计数（指数退避，内联 setTimeout 重连，无需保存 timer 引用）
+      _watchRoomRetryCount: 0,         // 房间 watch 重试计数（同上）
+      _partnerRawData: null,           // 对方位置原始数据缓存
+      _backgroundTimer: null,          // 后台定位启动延迟 timer（_requestPermissions 中设置）
       _cachedMyLocation: null,         // 缓存自己的位置（避免频繁读 data）
       _cachedPartnerLocation: null,    // 缓存对方位置
       _markersInited: false,           // 标记是否已初始化
@@ -148,6 +147,7 @@ module.exports = {
       this._prevStale = false;
       this._userInteracted = false;
       this._initialFitDone = false;
+      this._backgroundTimer = null;
     };
 
     /**
@@ -706,14 +706,6 @@ module.exports = {
       if (this._backgroundTimer) {
         clearTimeout(this._backgroundTimer);
         this._backgroundTimer = null;
-      }
-      if (this._watchPartnerRetryTimer) {
-        clearTimeout(this._watchPartnerRetryTimer);
-        this._watchPartnerRetryTimer = null;
-      }
-      if (this._watchRoomRetryTimer) {
-        clearTimeout(this._watchRoomRetryTimer);
-        this._watchRoomRetryTimer = null;
       }
       this._watchPartnerRetryCount = 0;
       this._watchRoomRetryCount = 0;
