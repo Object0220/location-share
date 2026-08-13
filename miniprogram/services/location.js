@@ -3,22 +3,14 @@
  * 管理 GPS 采集、权限、上报、后台定位
  */
 
-// 不能用顶层 getApp()，App() 初始化时模块已加载但未完成
-// 改为在函数内部懒加载
-function getAppInstance() {
-  return getApp();
-}
-
 // 后台定位回调节流间隔 (ms)，避免高频回调刷屏（从环境配置读取，默认 5s）
 const CONFIG = require('../env-config');
 const MIN_REPORT_INTERVAL = Math.max(2000, (CONFIG.LOCATION && CONFIG.LOCATION.REPORT_INTERVAL) || 5000);
 
-let lastLocation = null;
 let locationCallback = null;
-// 取消令牌：stopUpdating 时设为 false，阻止重试回调继续执行
-let _active = false;
-let _started = false;   // startLocationUpdateBackground 防重复
-let _lastReportTime = 0;           // 上次成功上报的时间戳
+let _active = false;   // 取消令牌：stopUpdating 时置 false，阻止回调继续执行
+let _started = false;  // startLocationUpdateBackground 防重复注册
+let _lastReportTime = 0; // 上报节流：上次成功上报时间戳
 
 module.exports = {
   /**
@@ -147,17 +139,7 @@ module.exports = {
 
     console.log('📍 [location] 🚀 开始位置上报(后台定位单一通道) roomId=' + roomId + ' userId=' + (userId ? userId.slice(0, 10) : '无'));
 
-    // 立即采一次高精度位置，让地图先居中、并先上报一条
-    this.getCurrentPosition().then(loc => {
-      if (!_active) return;
-      if (loc) {
-        lastLocation = loc;
-        if (onLocation) onLocation(loc);
-        this._reportLocation(roomId, userId, loc);
-      }
-    });
-
-    // 启动后台定位：前台/后台共用此通道，onLocationChange 回调统一驱动"更新地图 + 上报"
+    // 单一后台定位通道：onLocationChange 回调统一驱动"地图居中 + 上报"，无需额外首采
     this._startBackgroundLocation(roomId, userId);
   },
 
@@ -174,7 +156,6 @@ module.exports = {
       console.warn('📍 [location] stopLocationUpdate 异常', e);
     }
     locationCallback = null;
-    lastLocation = null;
     _lastReportTime = 0;
   },
 
@@ -182,7 +163,6 @@ module.exports = {
    * 启动后台定位（唯一通道）
    * wx.startLocationUpdateBackground 在前台也会持续回调，因此前后台共用此通道。
    * 需配合 app.json 的 requiredBackgroundModes: ["location"]。
-   * 开发者工具不支持后台定位 → 降级为单次 getCurrentPosition 定时刷新。
    */
   _startBackgroundLocation(roomId, userId) {
     if (_started) {
@@ -195,100 +175,20 @@ module.exports = {
     const onLoc = (res) => {
       if (!_active) return;
       const loc = that._normalizeLocation(res);
-      lastLocation = loc;
       if (locationCallback) locationCallback(loc);
       that._reportLocation(roomId, userId, loc);
     };
 
-    // 开发者工具不支持后台定位，降级为轮询
-    try {
-      const sysInfo = wx.getSystemInfoSync();
-      if (sysInfo.platform === 'devtools') {
-        console.log('📍 [location] ⏭ 开发者工具，降级为轮询刷新');
-        that._startDevtoolsPolling(roomId, userId);
-        return;
-      }
-    } catch (_) {}
-
+    // 真机只走后台定位单一通道
     wx.startLocationUpdateBackground({
       success() {
         console.log('📍 [location] 后台定位已启动');
         wx.onLocationChange(onLoc);
       },
       fail(err) {
-        console.warn('📍 [location] 启动后台定位失败，降级为轮询', err);
-        that._startDevtoolsPolling(roomId, userId);
+        console.warn('📍 [location] 启动后台定位失败', err);
       },
     });
-  },
-
-  /**
-   * 开发者工具降级：定时刷新位置（仅工具环境，真机走后台定位）
-   */
-  _startDevtoolsPolling(roomId, userId) {
-    const that = this;
-    function poll() {
-      if (!_active) return;
-      setTimeout(() => {
-        if (!_active) return;
-        that.getCurrentPosition().then(loc => {
-          if (!_active) return;
-          if (loc) {
-            lastLocation = loc;
-            if (locationCallback) locationCallback(loc);
-            that._reportLocation(roomId, userId, loc);
-          }
-          poll();
-        });
-      }, MIN_REPORT_INTERVAL);
-    }
-    poll();
-  },
-
-  /**
-   * 获取当前位置（单次，高精度），失败重试 2 次
-   * @returns {Promise<object|null>}
-   */
-  async getCurrentPosition(retries = 2) {
-    if (!_active) return null;
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      if (!_active) return null;
-      if (attempt > 0) {
-        console.log('📍 [location] ⏳ 定位重试第 ' + attempt + '/' + retries + ' 次');
-        await new Promise(r => setTimeout(r, 1000));
-        if (!_active) return null;
-      }
-      try {
-        const res = await new Promise((resolve, reject) => {
-          wx.getLocation({
-            type: 'gcj02',
-            isHighAccuracy: true,
-            highAccuracyExpireTime: 10000,
-            success: resolve,
-            fail: reject,
-          });
-        });
-        if (!_active) return null;
-        const accuracy = res.accuracy || 0;
-        console.log('📍 [location] 定位成功 lat=' + res.latitude.toFixed(5) + ' lng=' + res.longitude.toFixed(5) + ' acc=' + accuracy.toFixed(0) + 'm');
-        return {
-          latitude: res.latitude,
-          longitude: res.longitude,
-          speed: res.speed || 0,
-          accuracy,
-          altitude: res.altitude || 0,
-          heading: res.heading || 0,
-          timestamp: Date.now(),
-        };
-      } catch (err) {
-        if (attempt < retries) {
-          console.warn('📍 [location] ⚠️ 定位失败，即将重试', err.errMsg || err);
-        } else {
-          console.warn('📍 [location] ❌ 定位失败（已重试' + retries + '次）', err.errMsg || err);
-        }
-      }
-    }
-    return null;
   },
 
   // ====== 内部方法 ======

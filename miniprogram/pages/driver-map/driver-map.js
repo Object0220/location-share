@@ -160,14 +160,14 @@ Page({
     const that = this;
 
     // 创建房间即开始持续上报位置（等待客户期间也上报，保证房间生命周期由司机控制）
+    console.log(DBG + '🚗 开始申请定位权限 roomId=' + that.roomId);
     locationService.requestPermission().then(granted => {
       if (granted) {
-        // 立即定位一次，让地图在等待客户期间就居中到当前位置，避免停留在默认(0,0)
-        locationService.getCurrentPosition().then(loc => {
-          if (loc) that._onMyLocationUpdate(loc);
-        }).catch(() => {});
+        console.log(DBG + '🚗 定位权限已授权，启动位置上报服务(后台定位通道)');
+        // 地图居中 + 位置上报统一由后台定位 onLocationChange 回调驱动
         that._startLocationServices();
       } else {
+        console.warn(DBG + '🚗 定位权限被拒绝');
         that._showLocationError('定位权限被拒绝，请在设置中开启');
       }
     });

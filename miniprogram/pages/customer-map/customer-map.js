@@ -89,7 +89,7 @@ Page({
         console.error(DBG + '❌ chooseLocation 失败', err);
         // 开发者工具不支持 chooseLocation
         try {
-          const sysInfo = wx.getSystemInfoSync();
+          const sysInfo = wx.getDeviceInfo();
           if (sysInfo.platform === 'devtools') {
             wx.showModal({
               title: '提示',

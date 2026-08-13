@@ -404,7 +404,6 @@ module.exports = {
       if (!loc) return;
       const myLoc = {
         latitude: loc.latitude, longitude: loc.longitude,
-        heading: loc.heading || 0, speed: loc.speed || 0,
       };
       this._cachedMyLocation = myLoc;
 
@@ -748,9 +747,8 @@ module.exports = {
     // ----- 通用事件 -----
 
     /**
-     * 重试获取位置
-     * 先重新申请权限（如果之前被拒，会跳转设置页）
-     * 有权限后再调 getCurrentPosition
+     * 重试获取位置：重新申请权限（若之前被拒会跳转设置页）
+     * 权限恢复后由后台定位回调自动更新地图，无需主动拉取
      */
     page.onRetryLocation = function () {
       this.setData({ locationError: '' });
@@ -759,10 +757,6 @@ module.exports = {
           this._showLocationError('定位权限被拒绝，请在设置中开启');
           return;
         }
-        locationService.getCurrentPosition().then(loc => {
-          if (loc) this._onMyLocationUpdate(loc);
-          else this._showLocationError('获取位置失败，请检查 GPS 信号');
-        });
       });
     };
 
@@ -771,9 +765,11 @@ module.exports = {
       if (e.detail.scale) this.data.mapScale = e.detail.scale;
     };
 
-    /** 地图拖拽开始 → 标记用户交互，停止自动移动中心 */
+    /** 地图拖拽开始 → 标记用户交互，停止自动移动中心（仅用户手势，代码 setData 触发的 update 不计入） */
     page.onRegionChange = function (e) {
-      if (e.type === 'begin') this._userInteracted = true;
+      if (e.type === 'begin' && e.causedBy === 'gesture') {
+        this._userInteracted = true;
+      }
     };
 
     /** 回到我的位置 */
