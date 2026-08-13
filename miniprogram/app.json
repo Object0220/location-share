@@ -4,7 +4,7 @@
     "pages/driver-map/driver-map",
     "pages/customer-map/customer-map",
     "pages/join/join",
-    "pages/waiting/waiting"
+    "pages/create/create"
   ],
   "window": {
     "navigationBarBackgroundColor": "#000000",

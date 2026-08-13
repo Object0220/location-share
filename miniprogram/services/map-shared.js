@@ -84,6 +84,7 @@ module.exports = {
       _prevStale: false,               // 上一次掉线状态（检测变化用）
       _userInteracted: false,          // 用户是否拖拽过地图
       _ended: false,                   // 共享是否已结束（防 _onRoomEnded 重入）
+      _initialFitDone: false,          // 首次视野框选是否已完成
     };
   },
 
@@ -111,6 +112,7 @@ module.exports = {
       this._markersInited = false;
       this._prevStale = false;
       this._userInteracted = false;
+      this._initialFitDone = false;
     };
 
     /**
@@ -226,6 +228,10 @@ module.exports = {
             this._watchPartnerRetryCount = 0;
           } else {
             console.warn(prefix + ' ⚠️ 对方位置 watch 断开，进入重连' + (status.error ? ': ' + (status.error.errMsg || status.error.message || status.error) : ''));
+            // 断开时先关闭旧 watcher，防止重连期间双 watcher 双 setData
+            if (this._unwatchLocation) {
+              try { this._unwatchLocation(); } catch (e) {}
+            }
             this._unwatchLocation = null;  // 清空引用，重连守卫才能通过
             this.setData({ wsConnected: false });
             this._scheduleRetry('Partner', () => {
@@ -273,13 +279,13 @@ module.exports = {
       const prefix = this._logPrefix();
       this._roomStatusWatcher = db.collection('rooms').doc(this.roomId).watch({
         onChange: (snapshot) => {
-          // 跳过 type=init（初始快照），只处理真实变更
-          if (snapshot.type === 'init') return;
+          // init 快照同样处理：断线重连后可能错过目的地变更，需要补回标记；
+          // ended 由 _ended 防重入保护，不会重复执行
           this._watchRoomRetryCount = 0;
           const room = snapshot.docs && snapshot.docs[0];
           if (!room) return;
           console.log(prefix + ' 🏠 房间变更: status=' + room.status + ' destination=' + (room.destination && room.destination.name ? room.destination.name : '无'));
-          // 检测目的地更新
+          // 检测目的地更新（含 init 快照，避免断线期间设置的标记永久丢失）
           if (room.destination && room.destination.latitude) {
             this.setData({ destination: room.destination });
             // markers 已初始化 → 单独 upsert 目的地标记；否则走 _refreshMarkers 重建
@@ -417,6 +423,12 @@ module.exports = {
         partnerLocation: partnerLoc, partnerOnline: true, partnerStale: false,
       });
 
+      // 首次同时拿到双方位置 → 框选视野（只触发一次，之后交给用户操作）
+      if (!this._initialFitDone && this._cachedMyLocation && this._cachedMyLocation.latitude) {
+        this._initialFitDone = true;
+        this._fitToPartners();
+      }
+
       // 计算距离
       if (this._cachedMyLocation && this._cachedMyLocation.latitude) {
         this.setData({
@@ -516,6 +528,28 @@ module.exports = {
       if (idx >= 0) markers[idx] = marker;
       else markers.push(marker);
       this.setData({ markers });
+    };
+
+    /**
+     * 视野框选：首次同时拿到双方位置时，让地图完整显示自己、对方与目的地
+     * 只触发一次，避免抢用户操作；少于两个有效点时静默跳过
+     */
+    page._fitToPartners = function () {
+      const my = this._cachedMyLocation;
+      const partner = this._cachedPartnerLocation;
+      const dest = this.data.destination;
+      const points = [];
+      if (my && my.latitude) points.push({ latitude: my.latitude, longitude: my.longitude });
+      if (partner && partner.latitude) points.push({ latitude: partner.latitude, longitude: partner.longitude });
+      if (dest && dest.latitude) points.push({ latitude: dest.latitude, longitude: dest.longitude });
+      if (points.length < 2) return;   // 少于两个点没有框选意义
+      try {
+        const mapCtx = wx.createMapContext('map', this);
+        mapCtx.includePoints({ points, padding: [90, 60, 90, 60] });
+        console.log(this._logPrefix() + ' 🗺️ 首次视野框选完成，共 ' + points.length + ' 个点');
+      } catch (e) {
+        console.warn('🗺️ includePoints 失败', e);
+      }
     };
 
     /**

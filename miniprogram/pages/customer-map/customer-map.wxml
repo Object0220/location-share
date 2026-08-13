@@ -24,8 +24,8 @@
         <view class="partner-detail">
           <text class="partner-name">{{partnerInfo.nickName || '司机'}}</text>
           <view class="partner-status">
-            <view class="status-dot {{partnerOnline ? 'online' : 'offline'}}"></view>
-            <text class="status-text">{{partnerOnline ? '在线' : '离线'}}</text>
+            <view class="status-dot {{partnerStale ? 'stale' : (partnerOnline ? 'online' : 'offline')}}"></view>
+            <text class="status-text">{{partnerStale ? '暂未更新' : (partnerOnline ? '在线' : '离线')}}</text>
             <text class="update-time" wx:if="{{partnerLastUpdate}}">· {{partnerLastUpdate}}</text>
           </view>
         </view>
@@ -74,8 +74,8 @@
         <view class="sheet-meta">
           <text class="sheet-name">{{partnerInfo.nickName || '司机'}}</text>
           <view class="sheet-online">
-            <view class="online-dot {{partnerOnline ? '' : 'off'}}"></view>
-            <text>{{partnerOnline ? '在线' : '离线'}}</text>
+            <view class="online-dot {{partnerStale ? 'stale' : (partnerOnline ? '' : 'off')}}"></view>
+            <text>{{partnerStale ? '暂未更新' : (partnerOnline ? '在线' : '离线')}}</text>
           </view>
         </view>
       </view>

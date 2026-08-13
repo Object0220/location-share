@@ -1,7 +1,7 @@
 /** ===== 加入页样式 ===== */
 .page {
   min-height: 100vh;
-  background: linear-gradient(170deg, #0f0f23 0%, #1a1a3e 40%, #16213e 70%, #0a1628 100%);
+  background: linear-gradient(160deg, #0e1633 0%, #142a5c 45%, #1b6fb8 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -15,37 +15,74 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  overflow: hidden;
 }
 
-.bg-glow {
+/* 柔和彩色光晕 */
+.bg-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
+  filter: blur(60px);
+  opacity: 0.55;
+  mix-blend-mode: screen;
 }
 
-.bg-glow-1 {
+.bg-blob-1 {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle at 30% 30%, #00e0ff, #1e90ff);
+  top: -90px;
+  right: -100px;
+}
+
+.bg-blob-2 {
   width: 280px;
   height: 280px;
-  background: rgba(64, 158, 255, 0.1);
-  top: -100px;
-  left: -80px;
+  background: radial-gradient(circle at 30% 30%, #19f0a8, #07c160);
+  bottom: -40px;
+  left: -90px;
 }
 
-.bg-glow-2 {
+.bg-blob-3 {
   width: 220px;
   height: 220px;
-  background: rgba(64, 158, 255, 0.07);
-  bottom: 80px;
-  right: -60px;
+  background: radial-gradient(circle at 30% 30%, #ffd166, #ff8e53);
+  top: 40%;
+  left: 55%;
+  opacity: 0.4;
 }
 
+/* 半透明描边光环 */
+.bg-circle {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.bg-circle-1 {
+  width: 300px;
+  height: 300px;
+  top: -80px;
+  right: -80px;
+}
+
+.bg-circle-2 {
+  width: 200px;
+  height: 200px;
+  bottom: 60px;
+  left: -60px;
+}
+
+/* 细微网格点缀 */
 .bg-grid {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-  background-size: 40px 40px;
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.6;
 }
 
 /* ---- 返回按钮 ---- */

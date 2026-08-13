@@ -2,8 +2,11 @@
 <view class="page">
   <!-- 背景装饰 -->
   <view class="bg-decoration">
-    <view class="bg-glow bg-glow-1"></view>
-    <view class="bg-glow bg-glow-2"></view>
+    <view class="bg-blob bg-blob-1"></view>
+    <view class="bg-blob bg-blob-2"></view>
+    <view class="bg-blob bg-blob-3"></view>
+    <view class="bg-circle bg-circle-1"></view>
+    <view class="bg-circle bg-circle-2"></view>
     <view class="bg-grid"></view>
   </view>
 

@@ -1,7 +1,7 @@
 /** 首页样式 */
 .page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: linear-gradient(160deg, #0e1633 0%, #142a5c 45%, #1b6fb8 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -18,18 +18,54 @@
   right: 0;
   bottom: 0;
   pointer-events: none;
+  overflow: hidden;
 }
 
+/* 柔和彩色光晕 */
+.bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.55;
+  mix-blend-mode: screen;
+}
+
+.bg-blob-1 {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle at 30% 30%, #00e0ff, #1e90ff);
+  top: -90px;
+  right: -100px;
+}
+
+.bg-blob-2 {
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle at 30% 30%, #19f0a8, #07c160);
+  bottom: -40px;
+  left: -90px;
+}
+
+.bg-blob-3 {
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle at 30% 30%, #ffd166, #ff8e53);
+  top: 40%;
+  left: 55%;
+  opacity: 0.4;
+}
+
+/* 半透明描边光环 */
 .bg-circle {
   position: absolute;
   border-radius: 50%;
-  opacity: 0.15;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .bg-circle-1 {
   width: 300px;
   height: 300px;
-  background: #07c160;
   top: -80px;
   right: -80px;
 }
@@ -37,9 +73,22 @@
 .bg-circle-2 {
   width: 200px;
   height: 200px;
-  background: #07c160;
   bottom: 60px;
   left: -60px;
+}
+
+/* 细微网格点缀 */
+.bg-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.6;
 }
 
 /* 头部 */

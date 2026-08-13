@@ -156,6 +156,11 @@
   background: #ccc;
 }
 
+.status-dot.stale {
+  background: #ffc300;
+  box-shadow: 0 0 6px rgba(255, 195, 0, 0.6);
+}
+
 .status-text {
   font-size: 12px;
   color: #999;
@@ -361,6 +366,10 @@
 
 .online-dot.off {
   background: #ccc;
+}
+
+.online-dot.stale {
+  background: #ffc300;
 }
 
 .sheet-stats {

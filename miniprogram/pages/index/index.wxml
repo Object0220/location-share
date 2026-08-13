@@ -2,8 +2,12 @@
 <view class="page">
   <!-- 背景装饰 -->
   <view class="bg-decoration">
+    <view class="bg-blob bg-blob-1"></view>
+    <view class="bg-blob bg-blob-2"></view>
+    <view class="bg-blob bg-blob-3"></view>
     <view class="bg-circle bg-circle-1"></view>
     <view class="bg-circle bg-circle-2"></view>
+    <view class="bg-grid"></view>
   </view>
 
   <!-- 顶部标题 -->
@@ -37,7 +41,7 @@
     </view>
   </view>
 
-  <!-- 创建房间后跳转到独立等待页 (pages/waiting/waiting) -->
+  <!-- 创建房间后跳转到独立创建页 (pages/create/create) -->
 
   <!-- Toast -->
   <view class="toast-overlay" wx:if="{{toast.show}}">

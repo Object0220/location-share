@@ -34,16 +34,8 @@ Page({
     }
 
     this._resetState();
-    this.roomId = room.roomId;
-    this.userId = app.globalData.openid;
-    if (room.partnerInfo) {
-      this.setData({
-        partnerInfo: {
-          nickName: room.partnerInfo.nickName || ROLE_NAMES.driver,
-          avatarUrl: room.partnerInfo.avatarUrl || '',
-        },
-      });
-    }
+    // 统一走共享初始化（roomId/userId/partnerInfo），不再手写副本
+    if (!this._initRoom()) return;
 
     console.log(DBG + '🚀 启动位置共享');
     this._requestPermissions('customer');
@@ -146,12 +138,16 @@ Page({
         try {
           wx.showLoading({ title: '退出救援...' });
           await roomService.leaveRoom(this.roomId, 'customer');
+          // 退出后立即停止定位上报与监听（房间数据保留本地，重新加入时再启动）
+          this._cleanup();
           wx.hideLoading();
           const pages = getCurrentPages();
           wx.navigateBack({ delta: Math.max(1, Math.min(pages.length, 2)) });
         } catch (err) {
           wx.hideLoading();
           console.error(DBG + '退出失败', err);
+          // 退出失败也停止定位，避免页面离开后仍在后台上报
+          this._cleanup();
           const pages = getCurrentPages();
           wx.navigateBack({ delta: Math.max(1, Math.min(pages.length, 2)) });
         }
