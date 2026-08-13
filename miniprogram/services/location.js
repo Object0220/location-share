@@ -235,6 +235,10 @@ module.exports = {
       success() {
         console.log('📍 [location] 后台定位已启动');
         wx.onLocationChange(function (res) {
+
+          console.log('📍 [location] 后台定位回调位置'+res);
+
+
           const loc = that._normalizeLocation(res);
           lastLocation = loc;
           if (locationCallback) locationCallback(loc);
@@ -396,10 +400,7 @@ module.exports = {
     return {
       latitude: raw.latitude,
       longitude: raw.longitude,
-      speed: raw.speed || 0,
-      accuracy: raw.horizontalAccuracy || raw.accuracy || 0,
       altitude: raw.altitude || 0,
-      heading: raw.direction || raw.heading || 0,
       timestamp: Date.now(),
     };
   },

@@ -162,11 +162,29 @@ Page({
     // 创建房间即开始持续上报位置（等待客户期间也上报，保证房间生命周期由司机控制）
     locationService.requestPermission().then(granted => {
       if (granted) {
+        // 立即定位一次，让地图在等待客户期间就居中到当前位置，避免停留在默认(0,0)
+        locationService.getCurrentPosition().then(loc => {
+          if (loc) that._onMyLocationUpdate(loc);
+        }).catch(() => {});
         that._startLocationServices();
       } else {
         that._showLocationError('定位权限被拒绝，请在设置中开启');
       }
     });
+
+    // watch 依赖云实时通道(ws)登录态，页面刚进入时连接可能尚未就绪，
+    // 先用一次轻量 callFunction 触发云登录态建立，完成后再发起 watch，
+    // 避免同步调用时抛 "ws connection not exists"。
+    wx.cloud.callFunction({ name: 'login' }).then(() => {
+      that._startJoinWatch(db);
+    }).catch(() => {
+      // 探活失败也继续尝试 watch，避免无限阻塞（多为网络抖动）
+      that._startJoinWatch(db);
+    });
+  },
+
+  _startJoinWatch(db) {
+    if (!this.roomId || this._joinWatcher) return;
 
     this._joinWatcher = db.collection('rooms').doc(this.roomId).watch({
       onChange: (snapshot) => {
@@ -186,7 +204,6 @@ Page({
         }
       },
       onError: (err) => {
-        // watch 是唯一监听通道，断开即失效，记录日志以便排查
         console.error(DBG + '❌ watch 失败，客户加入/退出将无法感知', err);
       },
     });

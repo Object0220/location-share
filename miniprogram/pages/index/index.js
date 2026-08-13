@@ -60,12 +60,6 @@ Page({
   onHide() {},
   onUnload() {},
 
-  /** 创建共享房间 — 直接跳转到等待页，由等待页负责创建 */
-  onCreateRoom() {
-    console.log('🏠 [首页] 👆 点击「创建共享房间」→ 跳转到创建页');
-    wx.navigateTo({ url: '/pages/create/create' });
-  },
-
   onJoinRoom() {
     wx.navigateTo({ url: '/pages/join/join' });
   },

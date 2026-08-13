@@ -15,10 +15,12 @@ module.exports = {
   /**
    * 创建共享房间（配对发起方）
    * @param {object} userInfo - { nickName, avatarUrl }
-   * @param {string} [phoneLast4] - 手机号后4位，用作共享码
+   * @param {string|object} [phoneLast4OrOptions] - 兼容旧调用：手机号后4位（共享码）；
+   *        新调用可传对象 { taskId, carOwnerPhone } 由外部传入任务参数创建房间
+   * @param {string} [carOwnerPhone] - 仅在旧调用形态下作为共享码补充（已废弃，保留兼容）
    * @returns {Promise<{roomId, shareCode, qrcodeUrl}>}
    */
-  async createRoom(userInfo, phoneLast4) {
+  async createRoom(userInfo, phoneLast4OrOptions) {
     const app = getAppInstance();
     // 等待 openid 就绪（首次打开可能还在获取中）
     const openid = await app.waitForOpenId();
@@ -27,8 +29,21 @@ module.exports = {
       return Promise.reject(new Error('未获取到用户标识'));
     }
 
-    const shareCode = phoneLast4 || this._generateShareCode();
-    const roomId = 'room_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    // 解析调用形态：新形态传对象 { taskId, carOwnerPhone }，旧形态传字符串 phoneLast4
+    let taskId = null;
+    let shareCode = null;
+    if (phoneLast4OrOptions && typeof phoneLast4OrOptions === 'object') {
+      taskId = phoneLast4OrOptions.taskId;
+      shareCode = phoneLast4OrOptions.carOwnerPhone; // 验证码直接使用车主号码后4位
+    } else {
+      shareCode = phoneLast4OrOptions || this._generateShareCode();
+    }
+
+    // 房间 id 以 taskId 作为唯一标识（避免与历史 room_ 前缀冲突）
+    const roomId = taskId ? 'task_' + taskId : ('room_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6));
+    if (!taskId && !shareCode) {
+      shareCode = this._generateShareCode();
+    }
 
     console.log('🏠 [createRoom] 🚀 调用云函数 roomId=' + roomId + ' shareCode=' + shareCode + ' user=' + (userInfo.nickName || '匿名'));
 
@@ -37,6 +52,7 @@ module.exports = {
       data: {
         roomId,
         shareCode,
+        taskId: taskId || '',
         userA: {
           userId: openid,
           nickName: userInfo.nickName || ROLE_NAMES.driver,

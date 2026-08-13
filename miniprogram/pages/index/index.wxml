@@ -13,23 +13,13 @@
   <!-- 顶部标题 -->
   <view class="header">
     <text class="header-title">道路救援</text>
-    <text class="header-subtitle">实时查看救援车辆和客户的位置</text>
+    <text class="header-subtitle">实时查看救援车辆的位置</text>
   </view>
 
 
 
   <!-- 主功能区 -->
   <view class="main-content">
-    <!-- 拖车司机入口 -->
-    <view class="action-card" bindtap="onCreateRoom">
-      <view class="action-icon create-icon">🚛</view>
-      <view class="action-text">
-        <text class="action-title">我是拖车司机</text>
-        <text class="action-desc">创建救援房间，邀请客户加入</text>
-      </view>
-      <text class="action-arrow">›</text>
-    </view>
-
     <!-- 客户入口 -->
     <view class="action-card" bindtap="onJoinRoom">
       <view class="action-icon join-icon">🔑</view>
@@ -40,8 +30,6 @@
       <text class="action-arrow">›</text>
     </view>
   </view>
-
-  <!-- 创建房间后跳转到独立创建页 (pages/create/create) -->
 
   <!-- Toast -->
   <view class="toast-overlay" wx:if="{{toast.show}}">

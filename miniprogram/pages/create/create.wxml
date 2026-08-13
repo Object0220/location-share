@@ -1,4 +1,4 @@
-<!-- 等待页 - 输入手机号后4位 → 创建房间 → 等待客户加入 -->
+<!-- 等待页 - 由 App 传入参数自动创建救援房间 -->
 <view class="page">
   <!-- 背景装饰 -->
   <view class="bg-decoration">
@@ -15,92 +15,22 @@
     <text class="back-icon">‹</text>
   </view>
 
-  <!-- ===== 第一阶段：输入手机号后4位 ===== -->
-  <block wx:if="{{showPhoneInput}}">
-    <view class="top-section">
-      <view class="avatar-circle">
-        <text class="avatar-icon">🚛</text>
-      </view>
-      <text class="page-title">创建救援房间</text>
-      <text class="page-desc">输入您的手机号后四位，客户输入此号码即可加入</text>
+  <!-- 自动创建房间状态 -->
+  <view class="top-section">
+    <view class="avatar-circle">
+      <text class="avatar-icon">🚛</text>
     </view>
+    <text class="page-title">创建救援房间</text>
+    <text class="page-desc">正在为您创建救援房间，请稍候...</text>
+  </view>
 
-    <view class="input-card">
-      <view class="code-slots">
-        <view class="code-slot {{item ? 'filled' : ''}}"
-              wx:for="{{phoneDigits}}" wx:key="index">
-          <text class="slot-text">{{item}}</text>
-          <view class="slot-cursor" wx:if="{{!item && index == phoneLength}}"></view>
-        </view>
-      </view>
-      <view class="slot-label">手机号后四位</view>
+  <view class="waiting-section">
+    <view class="pulse-ring"></view>
+    <view class="waiting-dots">
+      <view class="wdot"></view>
+      <view class="wdot"></view>
+      <view class="wdot"></view>
     </view>
-
-    <view class="keyboard-area">
-      <view class="kbd-row">
-        <view class="kbd-key" data-value="1" bindtap="onPhoneKeyPress">1</view>
-        <view class="kbd-key" data-value="2" bindtap="onPhoneKeyPress">2</view>
-        <view class="kbd-key" data-value="3" bindtap="onPhoneKeyPress">3</view>
-      </view>
-      <view class="kbd-row">
-        <view class="kbd-key" data-value="4" bindtap="onPhoneKeyPress">4</view>
-        <view class="kbd-key" data-value="5" bindtap="onPhoneKeyPress">5</view>
-        <view class="kbd-key" data-value="6" bindtap="onPhoneKeyPress">6</view>
-      </view>
-      <view class="kbd-row">
-        <view class="kbd-key" data-value="7" bindtap="onPhoneKeyPress">7</view>
-        <view class="kbd-key" data-value="8" bindtap="onPhoneKeyPress">8</view>
-        <view class="kbd-key" data-value="9" bindtap="onPhoneKeyPress">9</view>
-      </view>
-      <view class="kbd-row">
-        <view class="kbd-key kbd-empty"></view>
-        <view class="kbd-key" data-value="0" bindtap="onPhoneKeyPress">0</view>
-        <view class="kbd-key kbd-delete" bindtap="onPhoneDelete">
-          <text class="kbd-delete-icon">⌫</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="bottom-actions">
-      <text class="clear-btn" bindtap="onPhoneClear" wx:if="{{phoneLength > 0}}">清空</text>
-      <text class="clear-btn" wx:if="{{phoneLength == 0}}" style="visibility:hidden">清空</text>
-    </view>
-
-
-  </block>
-
-  <!-- ===== 第二阶段：等待客户加入 ===== -->
-  <block wx:if="{{showWaiting}}">
-    <view class="top-section">
-      <view class="avatar-circle success">
-        <text class="avatar-icon">✅</text>
-      </view>
-      <text class="page-title">救援房间已创建</text>
-      <text class="page-desc">请将手机号后四位告知客户</text>
-    </view>
-
-    <view class="code-card">
-      <view class="code-slots">
-        <view class="code-slot filled static" wx:for="{{shareCodeArray}}" wx:key="*this">
-          <text class="slot-text">{{item}}</text>
-        </view>
-      </view>
-    </view>
-
-    <button class="btn-copy" bindtap="onCopyCode">
-      <text class="copy-icon">📋</text>
-      <text>复制手机号后四位</text>
-    </button>
-
-    <view class="waiting-section">
-      <view class="pulse-ring"></view>
-      <view class="waiting-dots">
-        <view class="wdot"></view>
-        <view class="wdot"></view>
-        <view class="wdot"></view>
-      </view>
-      <text class="waiting-text">等待客户加入...</text>
-    </view>
-
-  </block>
+    <text class="waiting-text">正在创建救援房间...</text>
+  </view>
 </view>
