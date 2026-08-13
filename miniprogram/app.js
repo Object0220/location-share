@@ -3,8 +3,6 @@
  * App 实例
  */
 const config = require('./env-config');
-const locationService = require('./services/location');
-const roomService = require('./services/room');
 
 App({
   globalData: {
@@ -24,7 +22,7 @@ App({
     this._openidPromise = this.getOpenId();
 
     // 检查登录态和配对状态
-    this.checkSession();
+    this.restoreRoom();
 
     // 数据库自动初始化（延迟1秒确保云 SDK 就绪）
     setTimeout(() => {
@@ -52,17 +50,6 @@ App({
     }
     // 兜底：重新获取
     return this.getOpenId();
-  },
-
-  onShow() {
-    const room = this.globalData.currentRoom;
-    if (room) {
-      try {
-        locationService.startBackgroundUpdate(room.roomId, this.globalData.openid);
-      } catch (e) {
-        // 后台定位失败不阻塞
-      }
-    }
   },
 
   /**
@@ -238,9 +225,9 @@ App({
   },
 
   /**
-   * 检查登录态和上次配对
+   * 恢复上次未结束的配对房间（从本地缓存）
    */
-  checkSession() {
+  restoreRoom() {
     try {
       const savedRoom = wx.getStorageSync('currentRoom');
       if (savedRoom && savedRoom.roomId && savedRoom.status === 'active') {
