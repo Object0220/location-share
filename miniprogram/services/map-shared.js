@@ -20,7 +20,29 @@ const locationService = require('./location');
 const roomService = require('./room');
 const util = require('../utils/util');
 
+// ============================================================
+// 角色差异配置表
+// 司机端 / 客户端 在共享地图上的"视角差异"全部集中在此，
+// 避免散落在各方法里用 if (_shareRole === 'driver') 硬编码。
+// 新增角色差异时，先来这里加字段，再在 mixin 里引用。
+// ============================================================
+const ROLE_CONFIG = {
+  driver: {
+    icon: '🚗',                    // 日志前缀图标
+    partnerLabel: '客户',          // 对方标记上的称呼（司机看对方）
+    selfEndedLog: '🚗 司机主动结束，停留在当前页面',
+  },
+  customer: {
+    icon: '👤',                    // 日志前缀图标
+    partnerLabel: '司机',          // 对方标记上的称呼（客户看对方）
+    selfEndedLog: '👤 客户主动结束，停留在当前页面',
+  },
+};
+
 module.exports = {
+  // 暴露给页面/外部使用（如需扩展）
+  ROLE_CONFIG,
+
   // ============================================================
   // 配置常量
   // ============================================================
@@ -48,12 +70,9 @@ module.exports = {
       partnerOnline: false,
       wsConnected: true,
       partnerLastUpdate: '',
-      partnerSpeed: '0',
-      partnerHeading: '0',
       distance: null,
       locationError: '',
       partnerStale: false,
-      showPartnerDetail: false,
       isFirstLoad: true,
       destination: null,          // 救援目的地 { name, address, latitude, longitude }
       destDistance: null,         // 我到目的地的距离
@@ -62,11 +81,26 @@ module.exports = {
 
   // ============================================================
   // 页面私有字段默认值（不在 data 中，不触发渲染）
+  //
+  // ⚠️ 契约说明（页面与共享模块的约定，改动需谨慎）
+  // 这些字段由 mixin 注入到页面实例，是「共享模块 ↔ 页面」之间的隐式契约：
+  //
+  // 【页面 → 共享模块】页面在 onLoad 阶段必须设置的字段：
+  //   - roomId / userId        : 由 _initRoom() 或页面手动赋值，共享逻辑依赖
+  //   - _shareRole             : 调用 _requestPermissions(role) 时写入，驱动日志/文案
+  //
+  // 【页面 → 共享模块】页面可主动读取/写入、影响共享行为的"状态开关"：
+  //   - _selfEnded             : 置 true 时，结束不跳页而是停留在结束态（司机主动结束）
+  //   - _userInteracted        : 拖拽地图后置 true，停止自动移动中心
+  //
+  // 【共享模块 → 页面】其余 _xxx 字段均为共享模块内部状态，
+  //   页面【不应】直接读写，仅供 mixin 内部方法使用（见各自注释）。
   // ============================================================
   getDefaultFields() {
     return {
       roomId: '',
       userId: '',
+      _shareRole: '',                   // 【契约】角色 'driver' | 'customer'，由 _requestPermissions 写入，驱动 ROLE_CONFIG
       _staleCheckTimer: null,         // 掉线检测 interval id
       _updateUiTimer: null,            // UI 刷新 interval id
       _unwatchLocation: null,          // 位置 watch 的取消函数
@@ -82,7 +116,8 @@ module.exports = {
       _cachedPartnerLocation: null,    // 缓存对方位置
       _markersInited: false,           // 标记是否已初始化
       _prevStale: false,               // 上一次掉线状态（检测变化用）
-      _userInteracted: false,          // 用户是否拖拽过地图
+      _userInteracted: false,          // 【契约】用户拖拽过地图后置 true，停止自动移动中心
+      _selfEnded: false,               // 【契约】主动结束标志：true 时结束停留在当前页而非跳页
       _ended: false,                   // 共享是否已结束（防 _onRoomEnded 重入）
       _initialFitDone: false,          // 首次视野框选是否已完成
     };
@@ -141,14 +176,14 @@ module.exports = {
 
     // ----- 权限 & 定位服务 -----
 
-    /** 日志前缀：🚗 司机 / 👤 客户 */
+    /** 日志前缀：🚗 司机 / 👤 客户（取自 ROLE_CONFIG） */
     page._logPrefix = function () {
-      return this._shareRole === 'driver' ? '🚗' : '👤';
+      return (ROLE_CONFIG[this._shareRole] || ROLE_CONFIG.customer).icon;
     };
 
-    /** 对方标记的显示文字：司机端看对方是"客户"，客户端看对方是"司机" */
+    /** 对方标记的显示文字：司机端看对方是"客户"，客户端看对方是"司机"（取自 ROLE_CONFIG） */
     page._partnerLabel = function () {
-      return this._shareRole === 'driver' ? '客户' : '司机';
+      return (ROLE_CONFIG[this._shareRole] || ROLE_CONFIG.customer).partnerLabel;
     };
 
     /**
@@ -338,9 +373,9 @@ module.exports = {
       this._cleanup();
       getApp().clearRoom();
 
-      // 司机主动结束：不关闭页面，展示结束态
+      // 主动结束（司机/客户）：不关闭页面，展示结束态
       if (this._selfEnded) {
-        console.log('🚗 司机主动结束，停留在当前页面');
+        console.log((ROLE_CONFIG[this._shareRole] || ROLE_CONFIG.customer).selfEndedLog);
         this.setData({ shareEnded: true });
         return;
       }
@@ -430,6 +465,16 @@ module.exports = {
       }
 
       // 计算距离
+      if (this._cachedMyLocation && this._cachedMyLocation.latitude) {
+        this.setData({
+          distance: util.formatDistance(util.calcDistance(
+            this._cachedMyLocation.latitude, this._cachedMyLocation.longitude,
+            partnerLoc.latitude, partnerLoc.longitude
+          )),
+        });
+      }
+
+      // 计算距离（顶部信息卡展示）
       if (this._cachedMyLocation && this._cachedMyLocation.latitude) {
         this.setData({
           distance: util.formatDistance(util.calcDistance(
@@ -576,7 +621,7 @@ module.exports = {
 
     // ----- UI 定时刷新 -----
 
-    /** 启动"距离上次更新"标签的 1s 定时器 */
+    /** 启动"距离上次更新"标签的定时器 */
     page._startUiTimer = function () {
       this._stopUiTimer();
       this._refreshUpdateTime();
@@ -591,7 +636,7 @@ module.exports = {
       }
     };
 
-    /** 刷新时间标签（如"30秒前""2分钟前"） */
+    /** 刷新时间标签（如"30秒前""2分钟前"），顶部信息卡"更新"字段依赖 */
     page._refreshUpdateTime = function () {
       if (this._lastPartnerTimestamp > 0) {
         this.setData({ partnerLastUpdate: util.formatTimeAgo(this._lastPartnerTimestamp) });
@@ -721,23 +766,6 @@ module.exports = {
     };
 
     // ----- 通用事件 -----
-
-    /** 点击对方标记 → 显示详情弹窗 */
-    page.onMarkerTap = function (e) {
-      if (e.detail.markerId === 'self') return;
-      this.setData({
-        showPartnerDetail: true,
-        partnerSpeed: this._partnerRawData
-          ? (this._partnerRawData.speed || 0).toFixed(1) : '0',
-        partnerHeading: this._partnerRawData
-          ? Math.round(this._partnerRawData.heading || 0) + '°' : '0°',
-      });
-    };
-
-    /** 关闭详情弹窗 */
-    page.onCloseDetail = function () {
-      this.setData({ showPartnerDetail: false });
-    };
 
     /**
      * 重试获取位置
