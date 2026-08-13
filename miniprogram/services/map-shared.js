@@ -740,13 +740,13 @@ module.exports = {
         if (room.status === 'ended') this._showLocationError('共享已结束');
         return;
       }
-      if (this.roomId && this.userId) locationService.onForeground(this.roomId, this.userId);
+      if (this.roomId && this.userId) locationService.setForegroundMode(true, this.roomId, this.userId);
       this._startUiTimer();
     };
 
     /** 页面 onHide 统一处理：降级为后台定位 + 停止 UI 刷新定时器 */
     page._handleHide = function () {
-      if (this.roomId && this.userId) locationService.onBackground(this.roomId, this.userId);
+      if (this.roomId && this.userId) locationService.setForegroundMode(false, this.roomId, this.userId);
       this._stopUiTimer();
     };
 

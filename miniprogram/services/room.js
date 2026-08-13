@@ -114,27 +114,6 @@ module.exports = {
   },
 
   /**
-   * 获取房间信息和客户位置
-   * @param {string} roomId
-   * @returns {Promise<{roomData, partnerLocation}>}
-   */
-  async getRoomInfo(roomId) {
-    console.log('📡 [getRoomInfo] 🚀 调用云函数 roomId=' + roomId);
-    try {
-      const res = await wx.cloud.callFunction({
-        name: 'getRoomInfo',
-        data: { roomId },
-      });
-      const r = res.result;
-      console.log('📡 [getRoomInfo] 📥 返回 code=' + (r ? r.code : '无') + ' msg=' + (r ? r.message : '无') + ' 状态=' + (r && r.roomData ? r.roomData.status : '无') + ' 对方位置=' + (r && r.partnerLocation ? '有' : '无'));
-      return r || { code: -2, message: '云函数返回空' };
-    } catch (err) {
-      console.error('📡 [getRoomInfo] ❌ 云函数调用失败', err);
-      return { code: -2, message: '云函数调用失败: ' + (err.message || 'timeout') };
-    }
-  },
-
-  /**
    * 结束共享 / 离开房间
    * @param {string} roomId
    * @returns {Promise}
@@ -189,20 +168,11 @@ module.exports = {
       .watch({
         onChange: (snapshot) => {
           if (onStatus) onStatus({ connected: true });
-          if (snapshot.type === 'init') {
-            // 初始数据
-            if (snapshot.docChanges && snapshot.docChanges.length > 0) {
-              const partnerLoc = snapshot.docChanges[0].doc;
-              if (onLocationUpdate) onLocationUpdate(partnerLoc);
+          (snapshot.docChanges || []).forEach((change) => {
+            if (change.queueType === 'update' || change.queueType === 'init') {
+              if (onLocationUpdate) onLocationUpdate(change.doc);
             }
-          } else {
-            // 实时变更
-            snapshot.docChanges.forEach(change => {
-              if (change.queueType === 'update' || change.queueType === 'init') {
-                if (onLocationUpdate) onLocationUpdate(change.doc);
-              }
-            });
-          }
+          });
         },
         onError: (err) => {
           console.error('位置订阅失败', err);
@@ -213,18 +183,6 @@ module.exports = {
     return () => {
       try { watcher.close(); } catch (e) {}
     };
-  },
-
-  /**
-   * 获取配对信息（客户昵称、头像）
-   * 统一走云函数，与 getRoomInfo 保持一致
-   * @param {string} roomId
-   * @returns {Promise<object|null>}
-   */
-  async getPartnerInfo(roomId) {
-    const result = await this.getRoomInfo(roomId);
-    if (result.code !== 0 || !result.roomData) return null;
-    return result.partnerInfo || null;
   },
 
   // ====== 辅助方法 ======

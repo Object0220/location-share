@@ -15,7 +15,6 @@ const INTERVAL_FOREGROUND = CONFIG.LOCATION.FOREGROUND_INTERVAL || 10000;   // �
 const INTERVAL_BACKGROUND = CONFIG.LOCATION.BACKGROUND_INTERVAL || 15000;    // 后台
 
 let updateTimer = null;
-let backgroundMode = false;
 let _backgroundStarted = false;  // startLocationUpdateBackground 防重复
 let isForeground = true;
 let lastLocation = null;
@@ -192,29 +191,17 @@ module.exports = {
     } catch (e) {
       console.warn('📍 [location] stopLocationUpdate 异常', e);
     }
-    backgroundMode = false;
     locationCallback = null;
     lastLocation = null;
     _lastReportTime = 0;
   },
 
   /**
-   * 小程序进入后台 - 降频上报
+   * 切换前后台上报频率（前台高频、后台降频）
+   * @param {boolean} isFore true=前台, false=后台
    */
-  onBackground(roomId, userId) {
-    isForeground = false;
-    if (updateTimer) {
-      clearTimeout(updateTimer);
-      updateTimer = null;
-    }
-    this._startPeriodicReport(roomId, userId);
-  },
-
-  /**
-   * 小程序回到前台 - 恢复频率
-   */
-  onForeground(roomId, userId) {
-    isForeground = true;
+  setForegroundMode(isFore, roomId, userId) {
+    isForeground = isFore;
     if (updateTimer) {
       clearTimeout(updateTimer);
       updateTimer = null;
@@ -247,7 +234,6 @@ module.exports = {
     wx.startLocationUpdateBackground({
       success() {
         console.log('📍 [location] 后台定位已启动');
-        backgroundMode = true;
         wx.onLocationChange(function (res) {
           const loc = that._normalizeLocation(res);
           lastLocation = loc;
