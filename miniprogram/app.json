@@ -20,6 +20,7 @@
   },
   "requiredPrivateInfos": ["getLocation", "onLocationChange", "startLocationUpdate", "startLocationUpdateBackground", "chooseLocation"],
   "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
   "style": "v2",
   "useExtendedLib": {
     "weui": true
