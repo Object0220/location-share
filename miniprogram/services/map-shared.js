@@ -193,10 +193,9 @@ module.exports = {
      * 启动顺序（重要）：
      * 1. requestPermission            ← 前台定位授权（阻塞）
      * 2. checkPermission → 后台授权   ← 可选，不阻塞
-     * 3. startLocationServices        ← 开始定位+上报
+     * 3. startLocationServices        ← 后台定位单一通道（前后台通用）
      * 4. startWatchingPartner         ← 监听对方位置（watch 实时推送）
      * 5. watchRoomEnded               ← 监听共享结束
-     * 6. startBackgroundUpdate(延迟5s)← 后台定位，与 startLocation 错开频率限制
      *
      * @param {string} role - 'driver' | 'customer'（仅用于日志前缀）
      */
@@ -220,23 +219,14 @@ module.exports = {
       this._startLocationServices();
       this._startWatchingPartner();
       this._watchRoomEnded();
-
-      // 延迟启动后台定位，避免与 startLocationUpdate 撞 -13000 频率限制
-      this._backgroundTimer = setTimeout(() => {
-        this._backgroundTimer = null;
-        locationService.startBackgroundUpdate(this.roomId, this.userId);
-      }, 5000);
     };
 
     /**
-     * 启动位置上报 + 本地地图更新
-     * - 立即采一次高精度位置
-     * - 注册 wx.onLocationChange 持续监听
-     * - 定时轮询上报（前台5s/后台15s）
+     * 启动位置上报 + 本地地图更新（后台定位单一通道，前后台通用）
      */
     page._startLocationServices = function () {
       const cb = (loc) => { if (loc) this._onMyLocationUpdate(loc); };
-      locationService.startUpdating(this.roomId, this.userId, cb, { foreground: true });
+      locationService.startUpdating(this.roomId, this.userId, cb);
     };
 
     // ----- 对方位置监听 -----
@@ -732,13 +722,11 @@ module.exports = {
         if (room.status === 'ended') this._showLocationError('共享已结束');
         return;
       }
-      if (this.roomId && this.userId) locationService.setForegroundMode(true, this.roomId, this.userId);
       this._startUiTimer();
     };
 
-    /** 页面 onHide 统一处理：降级为后台定位 + 停止 UI 刷新定时器 */
+    /** 页面 onHide 统一处理：停止 UI 刷新定时器（后台定位通道持续运行，无需切换） */
     page._handleHide = function () {
-      if (this.roomId && this.userId) locationService.setForegroundMode(false, this.roomId, this.userId);
       this._stopUiTimer();
     };
 

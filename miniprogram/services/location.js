@@ -9,22 +9,15 @@ function getAppInstance() {
   return getApp();
 }
 
-// 上报频率 (ms) — 从环境配置读取
+// 后台定位回调节流间隔 (ms)，避免高频回调刷屏（从环境配置读取，默认 5s）
 const CONFIG = require('../env-config');
-const INTERVAL_FOREGROUND = CONFIG.LOCATION.FOREGROUND_INTERVAL || 10000;   // 前台
-const INTERVAL_BACKGROUND = CONFIG.LOCATION.BACKGROUND_INTERVAL || 15000;    // 后台
+const MIN_REPORT_INTERVAL = Math.max(2000, (CONFIG.LOCATION && CONFIG.LOCATION.REPORT_INTERVAL) || 5000);
 
-let updateTimer = null;
-let _backgroundStarted = false;  // startLocationUpdateBackground 防重复
-let isForeground = true;
 let lastLocation = null;
 let locationCallback = null;
 // 取消令牌：stopUpdating 时设为 false，阻止重试回调继续执行
 let _active = false;
-// onLocationChange 防重复注册
-let _watchingStarted = false;
-// 上报节流 — 轮询间隔的一半，至少 2 秒
-const MIN_REPORT_INTERVAL = Math.max(2000, Math.floor(INTERVAL_FOREGROUND / 2));
+let _started = false;   // startLocationUpdateBackground 防重复
 let _lastReportTime = 0;           // 上次成功上报的时间戳
 
 module.exports = {
@@ -147,17 +140,14 @@ module.exports = {
    * @param {string} roomId - 房间ID
    * @param {string} userId - 用户ID
    * @param {function} onLocation - 位置更新回调 (用于更新本地地图)
-   * @param {object} options - 配置项 { foreground: boolean }
    */
-  startUpdating(roomId, userId, onLocation, options = {}) {
-    const isFore = options.foreground !== false;
-    isForeground = isFore;
+  startUpdating(roomId, userId, onLocation) {
     locationCallback = onLocation;
     _active = true;
 
-    console.log('📍 [location] 🚀 开始位置上报 roomId=' + roomId + ' userId=' + (userId ? userId.slice(0, 10) : '无') + ' foreground=' + isFore);
+    console.log('📍 [location] 🚀 开始位置上报(后台定位单一通道) roomId=' + roomId + ' userId=' + (userId ? userId.slice(0, 10) : '无'));
 
-    // 立即采一次高精度位置
+    // 立即采一次高精度位置，让地图先居中、并先上报一条
     this.getCurrentPosition().then(loc => {
       if (!_active) return;
       if (loc) {
@@ -167,11 +157,8 @@ module.exports = {
       }
     });
 
-    // 使用 wx.onLocationChange 持续监听（获取 heading 等实时数据）
-    this._startWatching(roomId, userId);
-
-    // 启动定时高精度轮询（主上报通道）
-    this._startPeriodicReport(roomId, userId);
+    // 启动后台定位：前台/后台共用此通道，onLocationChange 回调统一驱动"更新地图 + 上报"
+    this._startBackgroundLocation(roomId, userId);
   },
 
   /**
@@ -180,12 +167,7 @@ module.exports = {
   stopUpdating() {
     console.log('📍 [location] 🛑 停止位置上报');
     _active = false;
-    _watchingStarted = false;
-    _backgroundStarted = false;
-    if (updateTimer) {
-      clearTimeout(updateTimer);
-      updateTimer = null;
-    }
+    _started = false;
     try {
       wx.stopLocationUpdate({ fail: (err) => console.warn('📍 [location] stopLocationUpdate 失败', err) });
     } catch (e) {
@@ -197,59 +179,70 @@ module.exports = {
   },
 
   /**
-   * 切换前后台上报频率（前台高频、后台降频）
-   * @param {boolean} isFore true=前台, false=后台
+   * 启动后台定位（唯一通道）
+   * wx.startLocationUpdateBackground 在前台也会持续回调，因此前后台共用此通道。
+   * 需配合 app.json 的 requiredBackgroundModes: ["location"]。
+   * 开发者工具不支持后台定位 → 降级为单次 getCurrentPosition 定时刷新。
    */
-  setForegroundMode(isFore, roomId, userId) {
-    isForeground = isFore;
-    if (updateTimer) {
-      clearTimeout(updateTimer);
-      updateTimer = null;
-    }
-    this._startPeriodicReport(roomId, userId);
-  },
-
-  /**
-   * 启动后台定位更新
-   * 需配合 app.json 的 requiredBackgroundModes: ["location"]
-   */
-  startBackgroundUpdate(roomId, userId) {
-    if (_backgroundStarted) {
+  _startBackgroundLocation(roomId, userId) {
+    if (_started) {
       console.log('📍 [location] ⏭ 后台定位已启动，跳过重复注册');
       return;
     }
-    _backgroundStarted = true;
+    _started = true;
 
-    // 开发者工具不支持后台定位，直接降级
+    const that = this;
+    const onLoc = (res) => {
+      if (!_active) return;
+      const loc = that._normalizeLocation(res);
+      lastLocation = loc;
+      if (locationCallback) locationCallback(loc);
+      that._reportLocation(roomId, userId, loc);
+    };
+
+    // 开发者工具不支持后台定位，降级为轮询
     try {
       const sysInfo = wx.getSystemInfoSync();
       if (sysInfo.platform === 'devtools') {
-        console.log('📍 [location] ⏭ 开发者工具，跳过后台定位，使用轮询');
-        this._startPeriodicReport(roomId, userId);
+        console.log('📍 [location] ⏭ 开发者工具，降级为轮询刷新');
+        that._startDevtoolsPolling(roomId, userId);
         return;
       }
     } catch (_) {}
 
-    const that = this;
     wx.startLocationUpdateBackground({
       success() {
         console.log('📍 [location] 后台定位已启动');
-        wx.onLocationChange(function (res) {
-
-          console.log('📍 [location] 后台定位回调位置'+res);
-
-
-          const loc = that._normalizeLocation(res);
-          lastLocation = loc;
-          if (locationCallback) locationCallback(loc);
-          that._reportLocation(roomId, userId, loc);
-        });
+        wx.onLocationChange(onLoc);
       },
       fail(err) {
-        console.warn('📍 [location] 启动后台定位失败', err);
-        that._startPeriodicReport(roomId, userId);
+        console.warn('📍 [location] 启动后台定位失败，降级为轮询', err);
+        that._startDevtoolsPolling(roomId, userId);
       },
     });
+  },
+
+  /**
+   * 开发者工具降级：定时刷新位置（仅工具环境，真机走后台定位）
+   */
+  _startDevtoolsPolling(roomId, userId) {
+    const that = this;
+    function poll() {
+      if (!_active) return;
+      setTimeout(() => {
+        if (!_active) return;
+        that.getCurrentPosition().then(loc => {
+          if (!_active) return;
+          if (loc) {
+            lastLocation = loc;
+            if (locationCallback) locationCallback(loc);
+            that._reportLocation(roomId, userId, loc);
+          }
+          poll();
+        });
+      }, MIN_REPORT_INTERVAL);
+    }
+    poll();
   },
 
   /**
@@ -299,64 +292,6 @@ module.exports = {
   },
 
   // ====== 内部方法 ======
-
-  /**
-   * 启动 wx.onLocationChange 监听
-   */
-  _startWatching(roomId, userId) {
-    if (_watchingStarted) {
-      console.log('📍 [location] ⏭ watching 已在运行，跳过重复注册');
-      return;
-    }
-    const that = this;
-    try {
-      wx.startLocationUpdate({
-        success() {
-          _watchingStarted = true;
-          wx.onLocationChange(function (res) {
-            if (!_active) return;
-            const loc = that._normalizeLocation(res);
-            lastLocation = loc;
-            if (locationCallback) locationCallback(loc);
-          });
-        },
-        fail(err) {
-          console.warn('📍 [location] ⚠️ onLocationChange 不可用，仅靠轮询', err.errMsg || err);
-        },
-      });
-    } catch (e) {
-      console.warn('📍 [location] ⚠️ startLocationUpdate 不支持');
-    }
-  },
-
-  /**
-   * 定时高精度轮询（主上报通道）
-   */
-  _startPeriodicReport(roomId, userId) {
-    const that = this;
-    const interval = isForeground ? INTERVAL_FOREGROUND : INTERVAL_BACKGROUND;
-
-    function poll() {
-      if (!_active) return;
-      updateTimer = setTimeout(() => {
-        if (!_active) return;
-        that.getCurrentPosition().then(loc => {
-          if (!_active) return;
-          if (loc) {
-            lastLocation = loc;
-            if (locationCallback) locationCallback(loc);
-            that._reportLocation(roomId, userId, loc);
-          } else if (lastLocation) {
-            that._reportLocation(roomId, userId, lastLocation);
-          }
-          poll();
-        });
-      }, interval);
-    }
-
-    if (updateTimer) clearTimeout(updateTimer);
-    poll();
-  },
 
   /**
    * 上报位置到云端

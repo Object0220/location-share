@@ -185,6 +185,7 @@ Page({
 
   _startJoinWatch(db) {
     if (!this.roomId || this._joinWatcher) return;
+    const that = this;
 
     this._joinWatcher = db.collection('rooms').doc(this.roomId).watch({
       onChange: (snapshot) => {

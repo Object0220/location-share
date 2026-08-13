@@ -5,10 +5,10 @@ const CONFIG = {
   // 云开发环境 ID
   CLOUD_ENV_ID: 'cloudbase-d1gif13eec92ce0f2',
 
-  // 定位参数
+  // 定位参数（后台定位单一通道，前后台通用）
   LOCATION: {
-    FOREGROUND_INTERVAL: 5000,    // 前台 5s
-    BACKGROUND_INTERVAL: 15000,   // 后台 15s — 切后台降频省电
+    // 位置回调节流间隔，避免高频回调刷屏；开发者工具降级轮询也用此间隔
+    REPORT_INTERVAL: 5000,
   },
 };
 
