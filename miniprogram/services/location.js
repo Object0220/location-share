@@ -373,9 +373,6 @@ module.exports = {
       userId,
       latitude: location.latitude,
       longitude: location.longitude,
-      speed: location.speed || 0,
-      heading: location.heading || 0,
-      accuracy: location.accuracy || 0,
       timestamp: db.serverDate(),
       _timestamp: Date.now(),
     };
