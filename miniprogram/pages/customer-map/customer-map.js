@@ -128,6 +128,7 @@ Page({
   /** 保存目的地到云端 */
   async _saveDestination(dest) {
     this.setData({ settingDest: true });
+    wx.showLoading('设置中..')
     try {
       const result = await roomService.setDestination(this.roomId, dest);
       if (result.code === 0) {
@@ -142,6 +143,7 @@ Page({
       console.error(DBG + '❌ 设置失败', err);
       wx.showToast({ title: '设置失败', icon: 'none' });
     } finally {
+      wx.hideLoading()
       this.setData({ settingDest: false });
     }
   },

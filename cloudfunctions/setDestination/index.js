@@ -31,7 +31,7 @@ exports.main = async (event, context) => {
     });
 
     console.log('📍 [setDestination] ✅', JSON.stringify(destination));
-    return { code: 0, message: '目的地已设置' };
+    return { code: 0, message: '地址已设置' };
   } catch (err) {
     console.error('📍 [setDestination] ❌', err);
     return { code: -1, message: '设置失败' };
