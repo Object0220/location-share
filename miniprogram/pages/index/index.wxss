@@ -112,68 +112,6 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* 状态卡片 */
-.status-card {
-  width: 100%;
-  max-width: 340px;
-  z-index: 1;
-  margin-bottom: 24px;
-}
-
-.status-card-content {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 14px;
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-}
-
-.status-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.status-icon.active {
-  background: rgba(7, 193, 96, 0.12);
-}
-
-.status-info {
-  flex: 1;
-  min-width: 0;
-}
-
-
-
-.status-partner {
-  font-size: 14px;
-  color: #1a1a1a;
-  font-weight: 500;
-  margin-top: 1px;
-  display: block;
-  line-height: 1.4;
-}
-
-.btn-enter {
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 16px;
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.5;
-  flex-shrink: 0;
-  min-width: 0;
-}
-
 /* 主功能区 */
 .main-content {
   width: 100%;
@@ -209,10 +147,6 @@
   flex-shrink: 0;
 }
 
-.create-icon {
-  background: rgba(7, 193, 96, 0.12);
-}
-
 .join-icon {
   background: rgba(64, 158, 255, 0.12);
 }
@@ -238,104 +172,4 @@
 .action-arrow {
   font-size: 24px;
   color: #ccc;
-}
-
-/* 授权弹窗 */
-.auth-modal {
-  padding-top: 24px;
-}
-
-.auth-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  margin-bottom: 12px;
-}
-
-.auth-title {
-  font-size: 17px;
-  font-weight: 600;
-  display: block;
-  margin-bottom: 6px;
-}
-
-.auth-desc {
-  font-size: 13px;
-  color: #999;
-  display: block;
-  margin-bottom: 24px;
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 22px;
-  padding: 12px 0;
-  font-size: 15px;
-  font-weight: 500;
-  margin-bottom: 12px;
-  line-height: 1.5;
-  width: 100%;
-}
-
-.btn-text {
-  background: transparent;
-  border: none;
-  font-size: 14px;
-  color: #999;
-  padding: 8px 0;
-  line-height: 1.5;
-}
-
-/* 调试栏 */
-.debug-bar {
-  width: 100%;
-  max-width: 340px;
-  z-index: 2;
-  margin-bottom: 12px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.debug-text {
-  flex: 1;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
-  word-break: break-all;
-}
-.debug-btn {
-  background: rgba(7, 193, 96, 0.3);
-  border: 1px solid rgba(7, 193, 96, 0.5);
-  border-radius: 12px;
-  padding: 4px 12px;
-  font-size: 11px;
-  color: #07c160;
-  line-height: 1.5;
-  flex-shrink: 0;
-}
-
-/* Toast */
-.toast-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.toast-box {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px 32px;
-  font-size: 15px;
-  color: #333;
 }

@@ -5,7 +5,6 @@ const app = getApp();
 
 Page({
   data: {
-    toast: { show: false, message: '' },
     debugMsg: '',
     showRetry: false,
   },
@@ -62,11 +61,5 @@ Page({
 
   onJoinRoom() {
     wx.navigateTo({ url: '/pages/join/join' });
-  },
-
-  /** Toast 提示 */
-  _showToast(message) {
-    this.setData({ toast: { show: true, message } });
-    setTimeout(() => this.setData({ toast: { show: false, message: '' } }), 2000);
   },
 });

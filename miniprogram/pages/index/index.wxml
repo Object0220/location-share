@@ -24,17 +24,10 @@
     <view class="action-card" bindtap="onJoinRoom">
       <view class="action-icon join-icon">🔑</view>
       <view class="action-text">
-        <text class="action-title">我是客户</text>
-        <text class="action-desc">输入司机提供的共享码</text>
+        <text class="action-title">我是车主</text>
+        <text class="action-desc">输入您的手机号后四位</text>
       </view>
       <text class="action-arrow">›</text>
-    </view>
-  </view>
-
-  <!-- Toast -->
-  <view class="toast-overlay" wx:if="{{toast.show}}">
-    <view class="toast-box">
-      <text>{{toast.message}}</text>
     </view>
   </view>
 </view>
