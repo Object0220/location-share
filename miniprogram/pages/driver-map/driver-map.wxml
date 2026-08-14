@@ -109,8 +109,8 @@
     <view class="ended-card">
       <view class="ended-icon">🏁</view>
       <text class="ended-title">救援已结束</text>
-      <text class="ended-desc">位置共享已停止，客户将不再看到你的位置</text>
-      <button class="ended-btn" bindtap="onEndedGoHome">返回首页</button>
+      <text class="ended-desc">位置共享已停止，客户将不再看到您的位置</text>
+      <button class="ended-btn" bindtap="onEndedGoHome">返回APP</button>
     </view>
   </view>
 
