@@ -390,6 +390,13 @@
   margin: 10px -2px 8px;
 }
 
+/* 等待客户设置目的地的虚线分隔，与已设置态实线区分 */
+.info-card-divider--dashed {
+  height: 0;
+  border-top: 1px dashed #d8d8d8;
+  background: transparent;
+}
+
 .info-card-addr {
   display: flex;
   align-items: center;
@@ -435,6 +442,86 @@
   font-weight: 700;
   color: #f5a623;
   flex-shrink: 0;
+}
+
+/* 未设置目的地占位态：等待客户设置，提升司机端体验 */
+.info-card-addr--empty {
+  padding: 4px 0;
+}
+
+.info-card-addr--empty .addr-name {
+  color: #666;
+}
+
+.info-card-addr--empty .addr-detail {
+  color: var(--primary);
+}
+
+/* 脉冲图标，提示等待中 */
+.addr-pulse {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(7, 193, 96, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.addr-pulse::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  opacity: 0.6;
+  animation: addr-pulse 1.6s ease-out infinite;
+}
+
+.addr-pulse .addr-icon {
+  font-size: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes addr-pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* 占位态右侧"等待中"状态 */
+.addr-waiting {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  background: rgba(255, 195, 0, 0.12);
+  border-radius: 16px;
+  padding: 5px 12px;
+}
+
+.addr-waiting-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffc300;
+  animation: waiting-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes waiting-blink {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.addr-waiting-text {
+  font-size: 12px;
+  color: #c79100;
+  font-weight: 500;
 }
 
 /* 司机主动结束共享 → 结束态全屏覆盖 */

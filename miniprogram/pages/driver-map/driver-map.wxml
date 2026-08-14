@@ -89,6 +89,22 @@
       </view>
 
     </view>
+
+    <!-- 救援地址占位：客户尚未设置目的地，等待中 -->
+    <view class="info-card-divider info-card-divider--dashed" wx:if="{{!destination}}"></view>
+    <view class="info-card-addr info-card-addr--empty" wx:if="{{!destination}}">
+      <view class="addr-pulse">
+        <text class="addr-icon">⏳</text>
+      </view>
+      <view class="addr-text">
+        <text class="addr-name">等待客户设置救援地址</text>
+        <text class="addr-detail">客户设置后将自动同步，可一键导航前往</text>
+      </view>
+      <view class="addr-waiting">
+        <text class="addr-waiting-dot"></text>
+        <text class="addr-waiting-text">等待中</text>
+      </view>
+    </view>
   </view>
 
   <!-- ══════════ 4. 定位失败提示（带重试按钮） ══════════ -->
