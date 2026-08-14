@@ -71,7 +71,7 @@
     <view class="ended-card">
       <view class="ended-icon">🏁</view>
       <text class="ended-title">救援已结束</text>
-      <text class="ended-desc">位置共享已停止，司机将看不到您的位置</text>
+      <text class="ended-desc">车主端“位置共享已关闭，如有需要请联系技师沟通。</text>
       <button class="ended-btn" bindtap="onEndedGoHome">返回首页</button>
     </view>
   </view>
