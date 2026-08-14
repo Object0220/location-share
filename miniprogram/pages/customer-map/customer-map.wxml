@@ -35,7 +35,7 @@
     </view>
 
     <!-- 分割线 + 救援地址行 -->
-    <view class="info-card-divider" wx:if="{{destination}}"></view>
+    <view class="info-card-divider"></view>
     <view class="info-card-addr" wx:if="{{destination}}" bindtap="onSetDestination">
       <text class="addr-icon">🚩</text>
       <view class="addr-text">
@@ -45,6 +45,10 @@
       </view>
       <text class="addr-edit">修改</text>
     </view>
+
+
+
+
     <view class="info-card-addr info-card-addr--empty" wx:else bindtap="onSetDestination">
       <view class="addr-pulse">
         <text class="addr-icon">📍</text>
