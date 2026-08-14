@@ -32,8 +32,8 @@
     <text class="entry-hint">司机师傅会告知您手机号后四位</text>
   </view>
 
-  <!-- 服务状态条 -->
-  <view class="status-bar status-{{statusType}}" wx:if="{{debugMsg}}">
+  <!-- 服务状态条（已隐藏） -->
+  <view class="status-bar status-{{statusType}}" wx:if="{{false}}">
     <text class="status-dot"></text>
     <text class="status-text">{{debugMsg}}</text>
     <view class="status-retry" wx:if="{{showRetry}}" bindtap="onRetryInit">重试</view>
