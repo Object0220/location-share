@@ -1,5 +1,5 @@
 /**
- * 首页 - 创建/加入共享房间
+ * 首页 - C端车主入口
  */
 const app = getApp();
 
@@ -7,11 +7,12 @@ Page({
   data: {
     debugMsg: '',
     showRetry: false,
+    statusType: '', // success | loading | warn | error
   },
 
   onLoad() {
     console.log('🏠 [首页] onLoad');
-    this.setData({ debugMsg: '正在初始化数据库...' });
+    this.setData({ debugMsg: '正在连接服务...', statusType: 'loading' });
     this._checkDbReady();
   },
 
@@ -23,19 +24,22 @@ Page({
         .then(res => {
           const r = res.result || {};
           if (r.code !== 0) {
-            this.setData({ debugMsg: `❌ ${JSON.stringify(r)}`, showRetry: true });
+            this.setData({ debugMsg: '⚠️ 服务异常，点此重试', showRetry: true, statusType: 'error' });
             return;
           }
           const ok = (r.results || []).every(x => x.status === 'exists' || x.status === 'created');
-          const msgs = (r.results || []).map(x => `${x.name}=${x.status}`).join(', ');
-          this.setData({ debugMsg: ok ? `✅ 数据库就绪 (${msgs})` : `⚠️ ${msgs}`, showRetry: !ok });
+          this.setData({
+            debugMsg: ok ? '✅ 服务已就绪' : '⚠️ 服务初始化中，请稍候',
+            showRetry: !ok,
+            statusType: ok ? 'success' : 'warn',
+          });
         })
         .catch(err => {
           if (++attempts < 5) {
-            this.setData({ debugMsg: `⏳ 重试 ${attempts}/5...` });
+            this.setData({ debugMsg: `⏳ 正在重连（${attempts}/5）...`, statusType: 'loading' });
             setTimeout(check, 3000);
           } else {
-            this.setData({ debugMsg: `❌ ${err.message || err}`, showRetry: true });
+            this.setData({ debugMsg: `❌ 连接失败，点此重试`, showRetry: true, statusType: 'error' });
           }
         });
     };
@@ -43,7 +47,7 @@ Page({
   },
 
   onRetryInit() {
-    this.setData({ debugMsg: '重试中...', showRetry: false });
+    this.setData({ debugMsg: '正在重连...', showRetry: false, statusType: 'loading' });
     this._checkDbReady();
   },
 

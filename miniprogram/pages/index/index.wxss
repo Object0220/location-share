@@ -1,11 +1,11 @@
-/** 首页样式 */
+/** 首页样式 - C端车主入口 */
 .page {
   min-height: 100vh;
   background: linear-gradient(160deg, #0e1633 0%, #142a5c 45%, #1b6fb8 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 24px;
+  padding: 0 28px;
   position: relative;
   overflow: hidden;
 }
@@ -13,10 +13,7 @@
 /* 背景装饰 */
 .bg-decoration {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   pointer-events: none;
   overflow: hidden;
 }
@@ -80,10 +77,7 @@
 /* 细微网格点缀 */
 .bg-grid {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
@@ -91,85 +85,189 @@
   opacity: 0.6;
 }
 
-/* 头部 */
+/* 顶部品牌区 */
 .header {
-  padding-top: 120px;
-  padding-bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 110px;
+  padding-bottom: 36px;
   text-align: center;
   z-index: 1;
 }
 
+.hero-badge {
+  width: 68px;
+  height: 68px;
+  border-radius: 22px;
+  background: rgba(7, 193, 96, 0.16);
+  border: 1px solid rgba(7, 193, 96, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(7, 193, 96, 0.18);
+}
+
+.hero-icon {
+  font-size: 34px;
+  line-height: 1;
+}
+
 .header-title {
-  font-size: 36px;
+  font-size: 34px;
   font-weight: 700;
   color: #fff;
-  display: block;
-  margin-bottom: 8px;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
 }
 
 .header-subtitle {
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.5;
 }
 
 /* 主功能区 */
 .main-content {
   width: 100%;
-  max-width: 340px;
+  max-width: 360px;
   z-index: 1;
 }
 
-.action-card {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
-  padding: 20px;
+.entry-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  padding: 22px 20px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  gap: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.action-card:active {
-  transform: scale(0.98);
+.entry-card--hover {
+  transform: scale(0.975);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
 }
 
-.action-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
+.entry-card:active {
+  transform: scale(0.975);
+}
+
+.entry-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: rgba(7, 193, 96, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
+  font-size: 28px;
   flex-shrink: 0;
 }
 
-.join-icon {
-  background: rgba(64, 158, 255, 0.12);
-}
-
-.action-text {
+.entry-body {
   flex: 1;
+  min-width: 0;
 }
 
-.action-title {
-  font-size: 17px;
+.entry-title {
+  font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: #1a1a1a;
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
-.action-desc {
+.entry-desc {
   font-size: 13px;
   color: #999;
   display: block;
+  line-height: 1.4;
 }
 
-.action-arrow {
-  font-size: 24px;
-  color: #ccc;
+.entry-arrow {
+  font-size: 26px;
+  color: #c8c8c8;
+  flex-shrink: 0;
+}
+
+.entry-hint {
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* 服务状态条 */
+.status-bar {
+  position: fixed;
+  left: 20px;
+  right: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 20;
+  max-width: 360px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(12px);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #07c160;
+}
+
+.status-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+}
+
+.status-retry {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #07c160;
+  background: rgba(7, 193, 96, 0.18);
+  border: 1px solid rgba(7, 193, 96, 0.45);
+}
+
+.status-success .status-dot {
+  background: #07c160;
+}
+
+.status-loading .status-dot {
+  background: #ffc300;
+  animation: status-blink 1s ease-in-out infinite;
+}
+
+.status-warn .status-dot {
+  background: #ffc300;
+}
+
+.status-error .status-dot {
+  background: #fa5151;
+}
+
+@keyframes status-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }

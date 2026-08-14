@@ -1,4 +1,4 @@
-<!-- 首页 - 创建/加入共享 -->
+<!-- 首页 - C端车主入口 -->
 <view class="page">
   <!-- 背景装饰 -->
   <view class="bg-decoration">
@@ -10,24 +10,32 @@
     <view class="bg-grid"></view>
   </view>
 
-  <!-- 顶部标题 -->
+  <!-- 顶部品牌区 -->
   <view class="header">
+    <view class="hero-badge">
+      <text class="hero-icon">🚗</text>
+    </view>
     <text class="header-title">道路救援</text>
-    <text class="header-subtitle">实时查看救援车辆的位置</text>
+    <text class="header-subtitle">救援车辆正在赶来，实时查看位置与进度</text>
   </view>
-
-
 
   <!-- 主功能区 -->
   <view class="main-content">
-    <!-- 客户入口 -->
-    <view class="action-card" bindtap="onJoinRoom">
-      <view class="action-icon join-icon">🔑</view>
-      <view class="action-text">
-        <text class="action-title">我是车主</text>
-        <text class="action-desc">输入您的手机号后四位</text>
+    <view class="entry-card" bindtap="onJoinRoom" hover-class="entry-card--hover">
+      <view class="entry-icon">📍</view>
+      <view class="entry-body">
+        <text class="entry-title">我是车主</text>
+        <text class="entry-desc">输入您的手机号后四位，查看救援进度</text>
       </view>
-      <text class="action-arrow">›</text>
+      <view class="entry-arrow">›</view>
     </view>
+    <text class="entry-hint">司机师傅会告知您手机号后四位</text>
+  </view>
+
+  <!-- 服务状态条 -->
+  <view class="status-bar status-{{statusType}}" wx:if="{{debugMsg}}">
+    <text class="status-dot"></text>
+    <text class="status-text">{{debugMsg}}</text>
+    <view class="status-retry" wx:if="{{showRetry}}" bindtap="onRetryInit">重试</view>
   </view>
 </view>
