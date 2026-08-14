@@ -23,11 +23,21 @@ Page({
 
   onLoad(options) {
     console.log('🔗 [加入页] onLoad options=' + JSON.stringify(options));
-    if (options.code) {
-      console.log('🔗 [加入页] 从分享链接携带 code=' + options.code);
-      this.setData({ codeValue: options.code });
-      this._updateSlots(options.code);
-      this._doJoin(options.code);
+    // 支持两种入口：
+    // 1. 普通链接带参：options.code
+    // 2. 扫码（小程序码）进入：参数在 options.scene 里，格式如 "code=1234"
+    let code = options.code;
+    if (!code && options.scene) {
+      const scene = decodeURIComponent(options.scene);
+      const match = scene.match(/code=([^&]+)/);
+      if (match) code = match[1];
+      console.log('🔗 [加入页] 从扫码 scene 解析 code=' + code);
+    }
+    if (code) {
+      console.log('🔗 [加入页] 携带 code=' + code);
+      this.setData({ codeValue: code });
+      this._updateSlots(code);
+      this._doJoin(code);
     }
   },
 

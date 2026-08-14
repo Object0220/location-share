@@ -65,7 +65,18 @@
     <text>⏳ 司机位置暂未更新</text>
   </view>
 
-  <view class="bottom-controls safe-area-bottom">
+  <!-- ══════════ 6. 已结束态：全屏覆盖层 ══════════ -->
+  <!-- shareEnded：客户退出房间 / 司机结束共享后停留本页，不自动返回 -->
+  <view class="ended-overlay" wx:if="{{shareEnded}}">
+    <view class="ended-card">
+      <view class="ended-icon">🏁</view>
+      <text class="ended-title">救援已结束</text>
+      <text class="ended-desc">位置共享已停止，司机将看不到您的位置</text>
+      <button class="ended-btn" bindtap="onEndedGoHome">返回首页</button>
+    </view>
+  </view>
+
+  <view class="bottom-controls safe-area-bottom" wx:if="{{!shareEnded}}">
     <button class="btn-end-share" bindtap="onEndShare">退出房间</button>
   </view>
 </view>

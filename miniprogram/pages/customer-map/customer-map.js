@@ -13,6 +13,7 @@ Page({
     ...shared.getDefaultData(),
     partnerInfo: { nickName: ROLE_NAMES.driver, avatarUrl: '' },
     settingDest: false,
+    shareEnded: false,
   },
   ...shared.getDefaultFields(),
 
@@ -39,6 +40,17 @@ Page({
 
     console.log(DBG + '🚀 启动位置共享');
     this._requestPermissions('customer');
+
+    // 客户端"共享结束"语义：无论客户主动退出还是司机结束共享，
+    // 都停留在当前页面展示"救援已结束"覆盖层（不自动返回），由"返回首页"离开
+    const _self = this;
+    this._onRoomEnded = function () {
+      if (_self._ended) return;        // 防重入
+      _self._ended = true;
+      _self._cleanup();
+      getApp().clearRoom();
+      _self.setData({ shareEnded: true });
+    };
   },
 
   onShow() {
@@ -50,10 +62,19 @@ Page({
   },
 
   onUnload() {
+    this._leaveRoomOnUnload();
     this._handleUnload(DBG);
   },
 
-  onBack() { this._handleBack(); },
+  onBack() {
+    // 已结束态：系统返回直接回首页，不再触发退出房间
+    if (this.data.shareEnded) {
+      this.onEndedGoHome();
+      return;
+    }
+    // 用户通过系统返回/导航返回时，主动退出房间并展示结束态覆盖层
+    this._exitRoom();
+  },
 
   // ====== 救援目的地 ======
 
@@ -135,23 +156,53 @@ Page({
       confirmText: '退出房间',
       success: async (res) => {
         if (!res.confirm) return;
-        try {
-          wx.showLoading({ title: '退出救援...' });
-          await roomService.leaveRoom(this.roomId, 'customer');
-          // 退出后立即停止定位上报与监听（房间数据保留本地，重新加入时再启动）
-          this._cleanup();
-          wx.hideLoading();
-          const pages = getCurrentPages();
-          wx.navigateBack({ delta: Math.max(1, Math.min(pages.length, 2)) });
-        } catch (err) {
-          wx.hideLoading();
-          console.error(DBG + '退出失败', err);
-          // 退出失败也停止定位，避免页面离开后仍在后台上报
-          this._cleanup();
-          const pages = getCurrentPages();
-          wx.navigateBack({ delta: Math.max(1, Math.min(pages.length, 2)) });
-        }
+        this._exitRoom();
       },
     });
+  },
+
+  /**
+   * 退出房间并展示"救援已结束"覆盖层（停留本页）
+   * onEndShare（带确认弹窗）与 onBack（系统/导航返回）共用
+   * 不再自动返回上一页，由覆盖层"返回首页"离开
+   * @returns {Promise<void>}
+   */
+  async _exitRoom() {
+    // 标记"主动结束"：房间置为 ended 后，本页 watch 也会收到 ended 事件，
+    // 此时应停留在当前页面显示结束态，而非走 navigateBack
+    this._selfEnded = true;
+    try {
+      wx.showLoading({ title: '退出救援...' });
+      await roomService.leaveRoom(this.roomId, 'customer');
+      // 退出后立即停止定位上报与监听（房间数据保留本地，重新加入时再启动）
+      this._cleanup();
+      wx.hideLoading();
+      this._onRoomEnded();   // 展示 shareEnded 覆盖层
+    } catch (err) {
+      wx.hideLoading();
+      console.error(DBG + '退出失败', err);
+      // 退出失败也停止定位，避免页面离开后仍在后台上报
+      this._cleanup();
+      this._onRoomEnded();
+    }
+  },
+
+  /**
+   * 结束态页面：返回首页
+   */
+  onEndedGoHome() {
+    wx.reLaunch({ url: '/pages/index/index' });
+  },
+
+  /**
+   * 页面被卸载（系统返回键/手势返回/redirect）时静默退出房间
+   * 页面即将销毁，不再做 UI 反馈与导航，仅发起离开请求并清理本地
+   */
+  _leaveRoomOnUnload() {
+    if (this.data.shareEnded) return;   // 已结束态：房间已置为 ended，无需重复退出
+    roomService.leaveRoom(this.roomId, 'customer').catch((err) => {
+      console.error(DBG + '卸载时退出失败', err);
+    });
+    // 本地清理由 onUnload 的 _handleUnload 统一处理
   },
 });

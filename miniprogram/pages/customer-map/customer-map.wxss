@@ -324,4 +324,59 @@
   transform: scale(0.95);
 }
 
+/* 已结束态：全屏覆盖层 */
+.ended-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  background: rgba(255, 255, 255, 0.96);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ended-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 48px;
+  text-align: center;
+}
+
+.ended-icon {
+  font-size: 56px;
+  margin-bottom: 20px;
+}
+
+.ended-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+}
+
+.ended-desc {
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 40px;
+}
+
+.ended-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 25px;
+  padding: 14px 56px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.ended-btn:active {
+  transform: scale(0.95);
+}
+
 

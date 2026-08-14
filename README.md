@@ -89,7 +89,51 @@ location-share/
 2. 编译运行
 3. 真机调试（需要开启 GPS 和定位权限）
 
-### 6. 运行测试
+### 6. 通过链接启动小程序（短信 / 邮件）
+
+直接把 `weixin://` 开头的 Scheme 放进短信，在 **Android** 上基本无法识别跳转，iOS 也仅部分客户端支持。因此采用 **H5 中转页** 方案：短信里放一个 `https://` 普通链接，用户点击后由 H5 页根据设备拉起小程序。
+
+#### 6.1 生成 Scheme
+
+```bash
+# 设置小程序 secret（在微信公众平台 → 开发 → 开发设置 获取）
+export WX_APPSECRET='你的小程序secret'
+
+# 生成首页 Scheme（不带参数）
+node generate-scheme.js
+
+# 生成带共享码的 Scheme（用户点链接直接进加入页）
+node generate-scheme.js --path /pages/join/join --query "code=1234"
+```
+
+#### 6.2 部署 H5 中转页
+
+将 `web/launch.html` 上传到一个 **已备案的 https 域名**（如对象存储 / 静态托管）。然后用 `--host` 生成短信链接：
+
+```bash
+node generate-scheme.js --path /pages/join/join --query "code=1234" \
+  --host https://your-domain.com
+```
+
+输出示例：
+
+```
+📩 短信/邮件用此 https 链接（Android/iOS 通用）:
+    https://your-domain.com/launch.html?path=%2Fpages%2Fjoin%2Fjoin%3Fcode%3D1234&scheme=weixin%3A%2F%2F...
+```
+
+把这条 `https://` 链接放进短信/邮件即可。中转页逻辑：
+
+- **iOS / 微信内**：自动 `location.href = scheme` 拉起小程序；
+- **Android 微信外**：自动尝试拉起，失败则展示「复制链接在微信打开」兜底。
+
+#### 6.3 注意事项
+
+- Scheme 最长有效期 30 天（`-d` 参数，默认 30）；
+- H5 中转域名必须 **https 且已备案**，否则微信内可能无法跳转；
+- 若中转页与小程序同主体且已配置「URL Scheme 白名单」可进一步提升成功率（非必须）。
+
+### 7. 运行测试
 
 ```bash
 # 首次运行需安装测试依赖（jest）

@@ -430,6 +430,15 @@ module.exports = {
     page._onPartnerLocationUpdate = function (data) {
       if (!data) return;
       const now = Date.now();
+
+      // 收到任何推送都先清除"暂未更新/离线"状态（不受节流影响）
+      // 否则被节流吞掉的恢复推送会让标记一直显示"暂未更新"
+      if (this.data.partnerStale || !this.data.partnerOnline) {
+        this.setData({ partnerStale: false, partnerOnline: true });
+        this._prevStale = false;
+        this._updateMarkerLabels();
+      }
+
       if (now - this._lastPartnerTick < C.PARTNER_UPDATE_THROTTLE) return;
       this._lastPartnerTick = now;
       const prefix = this._logPrefix();

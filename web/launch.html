@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>打开位置共享小程序</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0; padding: 0; min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      background: #0b1020; color: #fff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 24px;
+    }
+    .card {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px; padding: 32px 24px; max-width: 360px; width: 100%;
+    }
+    .logo { font-size: 40px; margin-bottom: 12px; }
+    h1 { font-size: 20px; margin: 0 0 8px; font-weight: 600; }
+    p { font-size: 14px; line-height: 1.6; color: #b8c0d0; margin: 0 0 24px; }
+    .btn {
+      display: block; width: 100%; padding: 14px 0; border-radius: 12px;
+      background: #07c160; color: #fff; font-size: 16px; font-weight: 600;
+      text-decoration: none; border: none; cursor: pointer;
+    }
+    .btn:active { background: #06ad56; }
+    .tip { font-size: 12px; color: #7a8499; margin-top: 16px; line-height: 1.5; }
+    .fallback { display: none; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">📍</div>
+    <h1>打开位置共享</h1>
+    <p>正在为你打开小程序，若未自动跳转请点击下方按钮。</p>
+    <a id="openBtn" class="btn" href="#">打开小程序</a>
+    <div class="tip" id="tip">若点击后无反应，请确认已安装微信。</div>
+    <div class="fallback" id="fallback">
+      <p>当前环境无法直接拉起小程序，请复制以下链接在微信中打开：</p>
+      <input id="copyInput" readonly style="width:100%;padding:8px;border-radius:8px;border:none;text-align:center;" />
+      <button class="btn" id="copyBtn" style="margin-top:12px;background:#3a7afe;">复制链接</button>
+    </div>
+  </div>
+
+  <script>
+    // 从 URL 取参数
+    function getParam(name) {
+      return new URLSearchParams(location.search).get(name) || '';
+    }
+    var scheme = decodeURIComponent(getParam('scheme'));      // weixin://... openlink
+    var path = getParam('path');                              // 小程序落地页
+    var ua = navigator.userAgent || '';
+    var isIOS = /iPhone|iPad|iPod/i.test(ua);
+    var isAndroid = /Android/i.test(ua);
+    var isWeChat = /MicroMessenger/i.test(ua);
+
+    var btn = document.getElementById('openBtn');
+
+    // 微信环境内：直接走 scheme（微信会识别并拉起小程序）
+    // 微信外：iOS 可直接 location.href 拉起；Android 多需用户手动点按钮
+    function tryLaunch() {
+      if (!scheme) return;
+      if (isIOS) {
+        // iOS：直接跳转 scheme
+        window.location.href = scheme;
+      } else {
+        // Android / 其他：尝试跳转，并展示兜底提示
+        var t = Date.now();
+        window.location.href = scheme;
+        // 若 1.5s 后仍未离开（说明没拉起），展示复制兜底
+        setTimeout(function () {
+          if (Date.now() - t < 2000 && !document.hidden) {
+            document.getElementById('fallback').style.display = 'block';
+            document.getElementById('copyInput').value = location.href;
+          }
+        }, 1600);
+      }
+    }
+
+    if (scheme) {
+      btn.href = scheme;
+      // 进入页面自动尝试一次
+      tryLaunch();
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        tryLaunch();
+      });
+    } else {
+      btn.textContent = '缺少启动参数';
+      btn.style.background = '#555';
+    }
+
+    // 复制兜底链接
+    document.getElementById('copyBtn') &&
+      document.getElementById('copyBtn').addEventListener('click', function () {
+        var input = document.getElementById('copyInput');
+        input.select();
+        try { document.execCommand('copy'); this.textContent = '已复制'; }
+        catch (e) { input.setSelectionRange(0, 999); document.execCommand('copy'); }
+      });
+  </script>
+</body>
+</html>
